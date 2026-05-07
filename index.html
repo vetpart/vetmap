@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="robots" content="noindex,nofollow,noarchive" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="婺城兽医路线" />
+  <meta name="apple-mobile-web-app-title" content="兽医地图" />
   <meta name="theme-color" content="#0f3d5e" />
-  <title>金华市婺城区宠物医疗店面路线</title>
+  <title>兽医地图</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
@@ -28,15 +28,16 @@
     html, body { margin: 0; min-height: 100%; background: var(--bg); }
     body { overflow: hidden; }
     a { color: var(--blue); text-decoration: none; }
-    button, input { font: inherit; }
+    button, input, select { font: inherit; }
+    .hidden { display: none !important; }
     .app {
       display: grid;
-      grid-template-rows: minmax(310px, 43vh) minmax(0, 57vh);
+      grid-template-rows: minmax(300px, 42vh) minmax(0, 58vh);
       height: 100vh;
       height: 100dvh;
       background: var(--bg);
     }
-    #map { width: 100%; height: 100%; min-height: 310px; background: #d9dde5; }
+    #map { width: 100%; height: 100%; min-height: 300px; background: #d9dde5; }
     .sheet {
       min-height: 0;
       overflow: hidden;
@@ -49,71 +50,84 @@
       z-index: 400;
       box-shadow: 0 -4px 24px rgba(16, 32, 51, .12);
     }
-    header {
-      padding: 13px 14px 10px;
-      border-bottom: 1px solid var(--line);
-    }
-    h1 {
-      margin: 0 0 8px;
-      font-size: 18px;
-      line-height: 1.25;
-      letter-spacing: 0;
-    }
-    .summary {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 8px;
-    }
-    .summary div {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 8px 9px;
-      background: #f8fafc;
-    }
-    .summary b { display: block; font-size: 18px; line-height: 1.1; }
+    header { padding: 13px 14px 10px; border-bottom: 1px solid var(--line); }
+    h1 { margin: 0 0 8px; font-size: 18px; line-height: 1.25; letter-spacing: 0; }
+    .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+    .summary div { border: 1px solid var(--line); border-radius: 8px; padding: 8px 7px; background: #f8fafc; }
+    .summary b { display: block; font-size: 16px; line-height: 1.1; }
     .summary span { display: block; color: var(--muted); font-size: 11px; margin-top: 3px; }
-    .toolbar {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 8px;
-      margin-top: 9px;
-    }
-    .toolbar input {
+    .selectors { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; margin-top: 9px; }
+    select, input[type="search"] {
       width: 100%;
       border: 1px solid var(--line);
       border-radius: 8px;
-      padding: 10px 11px;
+      padding: 9px 8px;
       outline: none;
       background: #fff;
-      font-size: 15px;
+      font-size: 14px;
+      min-width: 0;
     }
+    .toolbar { display: grid; grid-template-columns: 1fr auto auto; gap: 7px; margin-top: 8px; }
     .toolbar button {
       border: 0;
       border-radius: 8px;
-      padding: 0 12px;
+      padding: 0 10px;
+      min-height: 38px;
       background: #0f3d5e;
       color: #fff;
-      font-weight: 700;
+      font-weight: 800;
+      white-space: nowrap;
     }
-    .note {
-      margin-top: 8px;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.45;
-    }
-    .list {
-      min-height: 0;
-      overflow: auto;
-      padding: 6px 10px calc(22px + env(safe-area-inset-bottom));
-      -webkit-overflow-scrolling: touch;
-    }
-    .stop {
-      display: grid;
-      grid-template-columns: 34px minmax(0, 1fr);
+    .route-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       gap: 10px;
-      padding: 12px 4px;
-      border-bottom: 1px solid #edf1f6;
+      margin-top: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: #f8fafc;
+      color: var(--muted);
+      font-size: 13px;
     }
+    .route-toggle label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--ink);
+      font-weight: 800;
+    }
+    .route-toggle input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--blue);
+    }
+    .note { margin-top: 8px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .content { min-height: 0; overflow: auto; padding: 6px 10px calc(22px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling: touch; }
+    .directory-title { padding: 8px 4px; color: var(--muted); font-size: 13px; }
+    .district-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+    .district-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 11px 10px;
+      background: #fff;
+    }
+    .district-card b { display: block; font-size: 15px; line-height: 1.35; }
+    .district-card span { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .district-card button {
+      border: 0;
+      border-radius: 8px;
+      padding: 9px 12px;
+      background: var(--blue);
+      color: #fff;
+      font-weight: 800;
+    }
+    .stop { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; padding: 12px 4px; border-bottom: 1px solid #edf1f6; }
     .stop.is-hidden { display: none; }
     .badge {
       display: inline-flex;
@@ -129,24 +143,9 @@
     }
     .stop:first-child .badge { background: var(--green); }
     .stop:last-child .badge { background: var(--red); }
-    .name {
-      margin-top: 1px;
-      font-weight: 800;
-      font-size: 15px;
-      line-height: 1.35;
-    }
-    .addr, .meta {
-      margin-top: 4px;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.45;
-    }
-    .actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-top: 9px;
-    }
+    .name { margin-top: 1px; font-weight: 800; font-size: 15px; line-height: 1.35; }
+    .addr, .meta { margin-top: 4px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 9px; }
     .actions a, .actions button {
       display: flex;
       min-height: 38px;
@@ -156,14 +155,10 @@
       border: 1px solid var(--line);
       background: #fff;
       color: var(--blue);
-      font-weight: 700;
+      font-weight: 800;
       font-size: 13px;
     }
-    .actions a.primary {
-      background: var(--blue);
-      border-color: var(--blue);
-      color: #fff;
-    }
+    .actions a.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
     .number-marker {
       width: 27px;
       height: 27px;
@@ -200,17 +195,8 @@
       box-shadow: 0 24px 70px rgba(0,0,0,.28);
       padding: 22px;
     }
-    .gate-card h2 {
-      margin: 0 0 8px;
-      font-size: 22px;
-      letter-spacing: 0;
-    }
-    .gate-card p {
-      margin: 0 0 15px;
-      color: var(--muted);
-      line-height: 1.55;
-      font-size: 14px;
-    }
+    .gate-card h2 { margin: 0 0 8px; font-size: 22px; letter-spacing: 0; }
+    .gate-card p { margin: 0 0 15px; color: var(--muted); line-height: 1.55; font-size: 14px; }
     .gate-card input {
       width: 100%;
       border: 1px solid var(--line);
@@ -231,30 +217,21 @@
       font-size: 16px;
     }
     .error { min-height: 20px; margin-top: 8px; color: #be123c; font-size: 13px; }
-    .hidden { display: none; }
-    @media (min-width: 860px) {
+    @media (min-width: 900px) {
       body { overflow: hidden; }
       .app { grid-template-columns: 430px minmax(0, 1fr); grid-template-rows: 100vh; }
       #map { grid-column: 2; grid-row: 1; height: 100vh; min-height: 100vh; }
-      .sheet {
-        grid-column: 1;
-        grid-row: 1;
-        border-top: 0;
-        border-right: 1px solid var(--line);
-        border-radius: 0;
-        margin-top: 0;
-        box-shadow: none;
-      }
+      .sheet { grid-column: 1; grid-row: 1; border-top: 0; border-right: 1px solid var(--line); border-radius: 0; margin-top: 0; box-shadow: none; }
     }
   </style>
 </head>
 <body>
   <div id="gate" class="gate">
     <section class="gate-card" aria-label="访问口令">
-      <h2>婺城兽医路线</h2>
+      <h2>兽医地图</h2>
       <p>请输入访问口令。这个口令只是避免链接被随手打开，不是强安全保护。</p>
       <input id="pass" type="password" autocomplete="current-password" inputmode="text" placeholder="访问口令" />
-      <button id="unlock">打开路线</button>
+      <button id="unlock">打开地图</button>
       <div id="error" class="error" aria-live="polite"></div>
     </section>
   </div>
@@ -263,84 +240,277 @@
     <div id="map"></div>
     <section class="sheet">
       <header>
-        <h1>金华市婺城区宠物医疗店面路线</h1>
+        <h1 id="title">兽医地图</h1>
         <div class="summary">
-          <div><b id="count">--</b><span>店面</span></div>
-          <div><b id="distance">--</b><span>近似直线里程</span></div>
+          <div><b id="clinicCount">--</b><span>店面</span></div>
+          <div><b id="districtCount">--</b><span>区县</span></div>
+          <div><b id="distance">--</b><span>路线里程</span></div>
           <div><b>GCJ-02</b><span>高德坐标</span></div>
         </div>
-        <div class="toolbar">
-          <input id="search" type="search" placeholder="搜索店名、地址、电话" />
-          <button id="fit">全图</button>
+        <div class="selectors">
+          <select id="province"></select>
+          <select id="city"></select>
+          <select id="district"></select>
         </div>
-        <div class="note">按编号逐站前往；点“高德定位”会打开高德地图。实际驾车/步行以高德实时导航为准。</div>
+        <div class="toolbar">
+          <input id="search" type="search" placeholder="搜索区县或店名、地址、电话" />
+          <button id="fit">全图</button>
+          <button id="share">复制链接</button>
+        </div>
+        <div class="route-toggle">
+          <label><input id="routeToggle" type="checkbox" checked /> 显示路径</label>
+          <span>关闭后只显示点位</span>
+        </div>
+        <div id="note" class="note">选择省、市、区县后，只加载该区县数据；每个区县都有独立分享地址。</div>
       </header>
-      <div id="list" class="list"></div>
+      <div id="content" class="content"></div>
     </section>
   </main>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const encodedPayload = "eyJzdW1tYXJ5IjogeyJzb3VyY2VfZmlsZSI6ICJEOlxcY29kZXhwZXRkYXRhXFxvdXRwdXRzXFx2ZXRfY2xpbmljc1/kuK3lm70yMOecgeS7vV9sYXRlc3RfMjAyNjA1MDZfMTgyNzU0Lnhsc3giLCAicHJvdmluY2UiOiAi5rWZ5rGf55yBIiwgImNpdHkiOiAi6YeR5Y2O5biCIiwgImRpc3RyaWN0IjogIuWpuuWfjuWMuiIsICJjb3VudCI6IDQyLCAiY29vcmRpbmF0ZV9zeXN0ZW0iOiAiR0NKLTAyIC8gQW1hcCIsICJ0b3RhbF9kaXN0YW5jZV9rbSI6IDQyLjI5NSwgImNlbnRlcl9sbmciOiAxMTkuNjQxMzczMzU3MTQyODcsICJjZW50ZXJfbGF0IjogMjkuMDgzNzE5NTcxNDI4NTcsICJnZW5lcmF0ZWRfYXQiOiAiMjAyNi0wNS0wNiAyMDozMjoxMCIsICJyb3V0ZV9tZXRob2QiOiAibXVsdGktc3RhcnQgbmVhcmVzdC1uZWlnaGJvciArIHN3ZWVwIGNhbmRpZGF0ZXMgKyAyLW9wdCBvcGVuLXBhdGggaGV1cmlzdGljIn0sICJyb3dzIjogW3sib3JkZXIiOiAxLCAibmFtZSI6ICLljLvlv4PlrqDnianljLvpmaIiLCAiYWRkcmVzcyI6ICLlhavkuIDljZfooZcxOTg45Y+3IiwgInBob25lIjogIjE1NzI0OTM4MTM1IiwgImFyZWEiOiAiIiwgImxuZyI6IDExOS42NTc2MzMsICJsYXQiOiAyOS4wNTIxNjEsICJwcmV2X2Rpc3RhbmNlX2ttIjogMC4wLCAiY3VtdWxhdGl2ZV9kaXN0YW5jZV9rbSI6IDAuMCwgImFtYXBfbWFya2VyX3VybCI6ICJodHRwczovL3VyaS5hbWFwLmNvbS9tYXJrZXI/cG9zaXRpb249MTE5LjY1NzYzMywyOS4wNTIxNjEmbmFtZT0lRTUlOEMlQkIlRTUlQkYlODMlRTUlQUUlQTAlRTclODklQTklRTUlOEMlQkIlRTklOTklQTImc3JjPWNvZGV4X3JvdXRlX21hcCZjb29yZGluYXRlPWdhb2RlJmNhbGxuYXRpdmU9MSJ9LCB7Im9yZGVyIjogMiwgIm5hbWUiOiAi5bCP5a6g5Yy75a625a6g54mp5Yy76ZmiKOaWsOWGnOi0uOW6lykiLCAiYWRkcmVzcyI6ICLmmajkuLDCt+awuOWIqeWNjumDvTHljLrljJcx6Zeo5peBIiwgInBob25lIjogIjE4MDY2MjAyMTk1IiwgImFyZWEiOiAiIiwgImxuZyI6IDExOS42NDg0NjksICJsYXQiOiAyOS4wNjM0MTYsICJwcmV2X2Rpc3RhbmNlX2ttIjogMS41MzYsICJjdW11bGF0aXZlX2Rpc3RhbmNlX2ttIjogMS41MzYsICJhbWFwX21hcmtlcl91cmwiOiAiaHR0cHM6Ly91cmkuYW1hcC5jb20vbWFya2VyP3Bvc2l0aW9uPTExOS42NDg0NjksMjkuMDYzNDE2Jm5hbWU9JUU1JUIwJThGJUU1JUFFJUEwJUU1JThDJUJCJUU1JUFFJUI2JUU1JUFFJUEwJUU3JTg5JUE5JUU1JThDJUJCJUU5JTk5JUEyJTI4JUU2JTk2JUIwJUU1JTg2JTlDJUU4JUI0JUI4JUU1JUJBJTk3JTI5JnNyYz1jb2RleF9yb3V0ZV9tYXAmY29vcmRpbmF0ZT1nYW9kZSZjYWxsbmF0aXZlPTEifSwgeyJvcmRlciI6IDMsICJuYW1lIjogIuWQvuWutuWuoOeJqeWMu+mZoijnlpHpmr7pqqjnp5HCt+WGheeqpemVnOS4reW/gykiLCAiYWRkcmVzcyI6ICLlj4zpvpnljZfooZfkuI7njq/ln47ljZfot6/opb/mrrXkuqTlj4nlj6Popb/ljZc2MOexsyIsICJwaG9uZSI6ICIwNTc5LTgyMDk4MDAyOzEzMzYyOTY1NzIyIiwgImFyZWEiOiAiIiwgImxuZyI6IDExOS42NDY0NzksICJsYXQiOiAyOS4wNzAzNjcsICJwcmV2X2Rpc3RhbmNlX2ttIjogMC43OTcsICJjdW11bGF0aXZlX2Rpc3RhbmNlX2ttIjogMi4zMzMsICJhbWFwX21hcmtlcl91cmwiOiAiaHR0cHM6Ly91cmkuYW1hcC5jb20vbWFya2VyP3Bvc2l0aW9uPTExOS42NDY0NzksMjkuMDcwMzY3Jm5hbWU9JUU1JTkwJUJFJUU1JUFFJUI2JUU1JUFFJUEwJUU3JTg5JUE5JUU1JThDJUJCJUU5JTk5JUEyJTI4JUU3JTk2JTkxJUU5JTlBJUJFJUU5JUFBJUE4JUU3JUE3JTkxJUMyJUI3JUU1JTg2JTg1JUU3JUFBJUE1JUU5JTk1JTlDJUU0JUI4JUFEJUU1JUJGJTgzJTI5JnNyYz1jb2RleF9yb3V0ZV9tYXAmY29vcmRpbmF0ZT1nYW9kZSZjYWxsbmF0aXZlPTEifSwgeyJvcmRlciI6IDQsICJuYW1lIjogIumHkeWNjuW6t+e+juWuoOeJqeWMu+mZoijlhbDmuqrooZflupcpIiwgImFkZHJlc3MiOiAi5YWw5rqq6KGXODQwLjg0MuWPtyIsICJwaG9uZSI6ICIwNTc5LTgyMjczMjM4OzEzNTY2NzY2NDc2IiwgImFyZWEiOiAi5rGf5Y2XIiwgImxuZyI6IDExOS42NTE1MDEsICJsYXQiOiAyOS4wNjg2MjUsICJwcmV2X2Rpc3RhbmNlX2ttIjogMC41MjUsICJjdW11bGF0aXZlX2Rpc3RhbmNlX2ttIjogMi44NTgsICJhbWFwX21hcmtlcl91cmwiOiAiaHR0cHM6Ly91cmkuYW1hcC5jb20vbWFya2VyP3Bvc2l0aW9uPTExOS42NTE1MDEsMjkuMDY4NjI1Jm5hbWU9JUU5JTg3JTkxJUU1JThEJThFJUU1JUJBJUI3JUU3JUJFJThFJUU1JUFFJUEwJUU3JTg5JUE5JUU1JThDJUJCJUU5JTk5JUEyJTI4JUU1JTg1JUIwJUU2JUJBJUFBJUU4JUExJTk3JUU1JUJBJTk3JTI5JnNyYz1jb2RleF9yb3V0ZV9tYXAmY29vcmRpbmF0ZT1nYW9kZSZjYWxsbmF0aXZlPTEifSwgeyJvcmRlciI6IDUsICJuYW1lIjogIuS9s+mbr+WuoOeJqeWMu+mZosK35a6g5L+d5a6a54K5KOWFq+S4gOWNl+ihl+WIhumZoikiLCAiYWRkcmVzcyI6ICLlhavkuIDljZfooZcxMTkw5Y+3IiwgInBob25lIjogIjE4OTY5MzY1NjkzIiwgImFyZWEiOiAiIiwgImxuZyI6IDExOS42NTY1NDEsICJsYXQiOiAyOS4wNjk3ODgsICJwcmV2X2Rpc3RhbmNlX2ttIjogMC41MDcsICJjdW11bGF0aXZlX2Rpc3RhbmNlX2ttIjogMy4zNjUsICJhbWFwX21hcmtlcl91cmwiOiAiaHR0cHM6Ly91cmkuYW1hcC5jb20vbWFya2VyP3Bvc2l0aW9uPTExOS42NTY1NDEsMjkuMDY5Nzg4Jm5hbWU9JUU0JUJEJUIzJUU5JTlCJUFGJUU1JUFFJUEwJUU3JTg5JUE5JUU1JThDJUJCJUU5JTk5JUEyJUMyJUI3JUU1JUFFJUEwJUU0JUJGJTlEJUU1JUFFJTlBJUU3JTgyJUI5JTI4JUU1JTg1JUFCJUU0JUI4JTgwJUU1JThEJTk3JUU4JUExJTk3JUU1JTg4JTg2JUU5JTk5JUEyJTI5JnNyYz1jb2RleF9yb3V0ZV9tYXAmY29vcmRpbmF0ZT1nYW9kZSZjYWxsbmF0aXZlPTEifSwgeyJvcmRlciI6IDYsICJuYW1lIjogIueMq+WNmuWjq+WuoOeJqeWMu+mZoiIsICJhZGRyZXNzIjogIuWFq+S4gOWNl+ihl+S4juS4ieaYpei3r+S6pOWPieWPo+WMlzEwMOexsyIsICJwaG9uZSI6ICIxODcwNTc5Njk4NyIsICJhcmVhIjogIiIsICJsbmciOiAxMTkuNjU3NjcyLCAibGF0IjogMjkuMDY2ODg2LCAicHJldl9kaXN0YW5jZV9rbSI6IDAuMzQxLCAiY3VtdWxhdGl2ZV9kaXN0YW5jZV9rbSI6IDMuNzA1LCAiYW1hcF9tYXJrZXJfdXJsIjogImh0dHBzOi8vdXJpLmFtYXAuY29tL21hcmtlcj9wb3NpdGlvbj0xMTkuNjU3NjcyLDI5LjA2Njg4NiZuYW1lPSVFNyU4QyVBQiVFNSU4RCU5QSVFNSVBMyVBQiVFNSVBRSVBMCVFNyU4OSVBOSVFNSU4QyVCQiVFOSU5OSVBMiZzcmM9Y29kZXhfcm91dGVfbWFwJmNvb3JkaW5hdGU9Z2FvZGUmY2FsbG5hdGl2ZT0xIn0sIHsib3JkZXIiOiA3LCAibmFtZSI6ICLkvK/niLXlrqDnianljLvpmaIo5LiJ6Lev5Y+j5bqXKSIsICJhZGRyZXNzIjogIuWFq+S4gOWNl+ihlzEzNTXlj7ciLCAicGhvbmUiOiAiMDU3OS04MzQzNzc3MCIsICJhcmVhIjogIiIsICJsbmciOiAxMTkuNjU3NzI1LCAibGF0IjogMjkuMDY2NzI1LCAicHJldl9kaXN0YW5jZV9rbSI6IDAuMDE5LCAiY3VtdWxhdGl2ZV9kaXN0YW5jZV9rbSI6IDMuNzI0LCAiYW1hcF9tYXJrZXJfdXJsIjogImh0dHBzOi8vdXJpLmFtYXAuY29tL21hcmtlcj9wb3NpdGlvbj0xMTkuNjU3NzI1LDI5LjA2NjcyNSZuYW1lPSVFNCVCQyVBRiVFNyU4OCVCNSVFNSVBRSVBMCVFNyU4OSVBOSVFNSU4QyVCQiVFOSU5OSVBMiUyOCVFNCVCOCU4OSVFOCVCNyVBRiVFNSU4RiVBMyVFNSVCQSU5NyUyOSZzcmM9Y29kZXhfcm91dGVfbWFwJmNvb3JkaW5hdGU9Z2FvZGUmY2FsbG5hdGl2ZT0xIn0sIHsib3JkZXIiOiA4LCAibmFtZSI6ICLlrqDlurflrqDnianljLvpmaIiLCAiYWRkcmVzcyI6ICLlhavkuIDljZfooZcxNTU35Y+3IiwgInBob25lIjogIjE4NjU3OTE2ODM1IiwgImFyZWEiOiAiIiwgImxuZyI6IDExOS42NTc4NzYsICJsYXQiOiAyOS4wNjQ5OTEsICJwcmV2X2Rpc3RhbmNlX2ttIjogMC4xOTMsICJjdW11bGF0aXZlX2Rpc3RhbmNlX2ttIjogMy45MTcsICJhbWFwX21hcmtlcl91cmwiOiAiaHR0cHM6Ly91cmkuYW1hcC5jb20vbWFya2VyP3Bvc2l0aW9uPTExOS42NTc4NzYsMjkuMDY0OTkxJm5hbWU9JUU1JUFFJUEwJUU1JUJBJUI3JUU1JUFFJUEwJUU3JTg5JUE5JUU1JThDJUJCJUU5JTk5JUEyJnNyYz1jb2RleF9yb3V0ZV9tYXAmY29vcmRpbmF0ZT1nYW9kZSZjYWxsbmF0aXZlPTEifSwgeyJvcmRlciI6IDksICJuYW1lIjogIuWuoOelneWuoOeJqeiviuaJgCIsICJhZGRyZXNzIjogIuWpuumHkeejkOi3rzE2OOWPtyIsICJwaG9uZSI6ICIxNTk1NzkyNjQ2NjsxODI2NjkxNzAwNyIsICJhcmVhIjogIiIsICJsbmciOiAxMTkuNjY0ODA3LCAibGF0IjogMjkuMDY4NTcxLCAicHJldl9kaXN0YW5jZV9rbSI6IDAuNzgyLCAiY3VtdWxhdGl2ZV9kaXN0YW5jZV9rbSI6IDQuNywgImFtYXBfbWFya2VyX3VybCI6ICJodHRwczovL3VyaS5hbWFwLmNvbS9tYXJrZXI/cG9zaXRpb249MTE5LjY2NDgwNywyOS4wNjg1NzEmbmFtZT0lRTUlQUUlQTAlRTclQTUlOUQlRTUlQUUlQTAlRTclODklQTklRTglQUYlOEElRTYlODklODAmc3JjPWNvZGV4X3JvdXRlX21hcCZjb29yZGluYXRlPWdhb2RlJmNhbGxuYXRpdmU9MSJ9LCB7Im9yZGVyIjogMTAsICJuYW1lIjogIuWwj+WPruW9k+WuoOeJqeacjeWKoSIsICJhZGRyZXNzIjogIumHkeejkOi3r+S4juS4nOmYs+ihl+S6pOWPieWPo+ilv+WMlzQw57GzIiwgInBob25lIjogIiIsICJhcmVhIjogIiIsICJsbmciOiAxMTkuNjY3NjM1LCAibGF0IjogMjkuMDY4Nzg0LCAicHJldl9kaXN0YW5jZV9rbSI6IDAuMjc2LCAiY3VtdWxhdGl2ZV9kaXN0YW5jZV9rbSI6IDQuOTc2LCAiYW1hcF9tYXJrZXJfdXJsIjogImh0dHBzOi8vdXJpLmFtYXAuY29tL21hcmtlcj9wb3NpdGlvbj0xMTkuNjY3NjM1LDI5LjA2ODc4NCZuYW1lPSVFNSVCMCU4RiVFNSU4RiVBRSVFNSVCRCU5MyVFNSVBRSVBMCVFNyU4OSVBOSVFNiU5QyU4RCVFNSU4QSVBMSZzcmM9Y29kZXhfcm91dGVfbWFwJmNvb3JkaW5hdGU9Z2FvZGUmY2FsbG5hdGl2ZT0xIn0sIHsib3JkZXIiOiAxMSwgIm5hbWUiOiAi54ix5a6D5a6g54mp6K+K5omAIiwgImFkZHJlc3MiOiAi546v5Z+O5Y2X6Lev6KW/5q61NTg45Y+3IiwgInBob25lIjogIjE1ODU4OTA1MzM4IiwgImFyZWEiOiAiIiwgImxuZyI6IDExOS42NjQzOTMsICJsYXQiOiAyOS4wNzI1ODcsICJwcmV2X2Rpc3RhbmNlX2ttIjogMC41MjcsICJjdW11bGF0aXZlX2Rpc3RhbmNlX2ttIjogNS41MDMsICJhbWFwX21hcmtlcl91cmwiOiAiaHR0cHM6Ly91cmkuYW1hcC5jb20vbWFya2VyP3Bvc2l0aW9uPTExOS42NjQzOTMsMjkuMDcyNTg3Jm5hbWU9JUU3JTg4JUIxJUU1JUFFJTgzJUU1JUFFJUEwJUU3JTg5JUE5JUU4JUFGJThBJUU2JTg5JTgwJnNyYz1jb2RleF9yb3V0ZV9tYXAmY29vcmRpbmF0ZT1nYW9kZSZjYWxsbmF0aXZlPTEifSwgeyJvcmRlciI6IDEyLCAibmFtZSI6ICLotZvpgqPliqjnianljLvpmaIo5Lic6Ziz6KGX5bqXKSIsICJhZGRyZXNzIjogIuS4nOmYs+ihlzUzMC01MzLlj7ciLCAicGhvbmUiOiAiMDU3OS04MzIyNDU0NSIsICJhcmVhIjogIiIsICJsbmciOiAxMTkuNjY1ODE1LCAibGF0IjogMjkuMDgwNjAxLCAicHJldl9kaXN0YW5jZV9rbSI6IDAuOTAyLCAiY3VtdWxhdGl2ZV9kaXN0YW5jZV9rbSI6IDYuNDA1LCAiYW1hcF9tYXJrZXJfdXJsIjogImh0dHBzOi8vdXJpLmFtYXAuY29tL21hcmtlcj9wb3NpdGlvbj0xMTkuNjY1ODE1LDI5LjA4MDYwMSZuYW1lPSVFOCVCNSU5QiVFOSU4MiVBMyVFNSU4QSVBOCVFNyU4OSVBOSVFNSU4QyVCQiVFOSU5OSVBMiUyOCVFNCVCOCU5QyVFOSU5OCVCMyVFOCVBMSU5NyVFNSVCQSU5NyUyOSZzcmM9Y29kZXhfcm91dGVfbWFwJmNvb3JkaW5hdGU9Z2FvZGUmY2FsbG5hdGl2ZT0xIn0sIHsib3JkZXIiOiAxMywgIm5hbWUiOiAi6YeR5Yac5Yqo54mp5Yy76ZmiIiwgImFkZHJlc3MiOiAi5Y+M6bmK6LevMTM55Y+3MealvOmHkeWNjuiBjOS4muaKgOacr+WtpumZoiIsICJwaG9uZSI6ICIiLCAiYXJlYSI6ICIiLCAibG5nIjogMTE5LjY1ODE4NSwgImxhdCI6IDI5LjA3OTIwNywgInByZXZfZGlzdGFuY2Vfa20iOiAwLjc1NywgImN1bXVsYXRpdmVfZGlzdGFuY2Vfa20iOiA3LjE2MiwgImFtYXBfbWFya2VyX3VybCI6ICJodHRwczovL3VyaS5hbWFwLmNvbS9tYXJrZXI/cG9zaXRpb249MTE5LjY1ODE4NSwyOS4wNzkyMDcmbmFtZT0lRTklODclOTElRTUlODYlOUMlRTUlOEElQTglRTclODklQTklRTUlOEMlQkIlRTklOTklQTImc3JjPWNvZGV4X3JvdXRlX21hcCZjb29yZGluYXRlPWdhb2RlJmNhbGxuYXRpdmU9MSJ9LCB7Im9yZGVyIjogMTQsICJuYW1lIjogIuW/g+W+l+WuoOWuoOeJqeWMu+mZoiIsICJhZGRyZXNzIjogIuS4ieaxn+ihl+mBk+S4uea6qui3rzY5MOWPtyIsICJwaG9uZSI6ICIxNTI2ODY0MTUwNyIsICJhcmVhIjogIiIsICJsbmciOiAxMTkuNjU4NDE4LCAibGF0IjogMjkuMDc4NDI0LCAicHJldl9kaXN0YW5jZV9rbSI6IDAuMDksICJjdW11bGF0aXZlX2Rpc3RhbmNlX2ttIjogNy4yNTIsICJhbWFwX21hcmtlcl91cmwiOiAiaHR0cHM6Ly91cmkuYW1hcC5jb20vbWFya2VyP3Bvc2l0aW9uPTExOS42NTg0MTgsMjkuMDc4NDI0Jm5hbWU9JUU1JUJGJTgzJUU1JUJFJTk3JUU1JUFFJUEwJUU1JUFFJUEwJUU3JTg5JUE5JUU1JThDJUJCJUU5JTk5JUEyJnNyYz1jb2RleF9yb3V0ZV9tYXAmY29vcmRpbmF0ZT1nYW9kZSZjYWxsbmF0aXZlPTEifSwgeyJvcmRlciI6IDE1LCAibmFtZSI6ICLkvbPnpr7lrqDnianljLvpmaLCt+ejgeWFseaMr8K36aqo56eRwrfnpZ7nu4/lhoXnp5EiLCAiYWRkcmVzcyI6ICLlhavkuIDljZfooZc4ODXlj7ciLCAicGhvbmUiOiAiMTgyNjc5MTU2MzA7MTgzMjkwMzc5MDIiLCAiYXJlYSI6ICIiLCAibG5nIjogMTE5LjY1NjQ1OCwgImxhdCI6IDI5LjA3NjM0MSwgInByZXZfZGlzdGFuY2Vfa20iOiAwLjMsICJjdW11bGF0aXZlX2Rpc3RhbmNlX2ttIjogNy41NTIsICJhbWFwX21hcmtlcl91cmwiOiAiaHR0cHM6Ly91cmkuYW1hcC5jb20vbWFya2VyP3Bvc2l0aW9uPTExOS42NTY0NTgsMjkuMDc2MzQxJm5hbWU9JUU0JUJEJUIzJUU3JUE2JUJFJUU1JUFFJUEwJUU3JTg5JUE5JUU1JThDJUJCJUU5JTk5JUEyJUMyJUI3JUU3JUEzJTgxJUU1JTg1JUIxJUU2JThDJUFGJUMyJUI3JUU5JUFBJUE4JUU3JUE3JTkxJUMyJUI3JUU3JUE1JTlFJUU3JUJCJThGJUU1JTg2JTg1JUU3JUE3JTkxJnNyYz1jb2RleF9yb3V0ZV9tYXAmY29vcmRpbmF0ZT1nYW9kZSZjYWxsbmF0aXZlPTEifSwgeyJvcmRlciI6IDE2LCAibmFtZSI6ICLogZTlrqDlrqDnianljLvpmaIiLCAiYWRkcmVzcyI6ICLkuLnmuqrot685Njflj7ciLCAicGhvbmUiOiAiMTc4NTg5OTU2NTQiLCAiYXJlYSI6ICIiLCAibG5nIjogMTE5LjY1MjY1OSwgImxhdCI6IDI5LjA3NzE1NSwgInByZXZfZGlzdGFuY2Vfa20iOiAwLjM4LCAiY3VtdWxhdGl2ZV9kaXN0YW5jZV9rbSI6IDcuOTMyLCAiYW1hcF9tYXJrZXJfdXJsIjogImh0dHBzOi8vdXJpLmFtYXAuY29tL21hcmtlcj9wb3NpdGlvbj0xMTkuNjUyNjU5LDI5LjA3NzE1NSZuYW1lPSVFOCU4MSU5NCVFNSVBRSVBMCVFNSVBRSVBMCVFNyU4OSVBOSVFNSU4QyVCQiVFOSU5OSVBMiZzcmM9Y29kZXhfcm91dGVfbWFwJmNvb3JkaW5hdGU9Z2FvZGUmY2FsbG5hdGl2ZT0xIn0sIHsib3JkZXIiOiAxNywgIm5hbWUiOiAi5ZSv5a6D5a6g54mp5Yy76ZmiIiwgImFkZHJlc3MiOiAi5a6+6Jm56LevNTc55Y+3IiwgInBob25lIjogIjE5MDU4MTIxMzg1IiwgImFyZWEiOiAiIiwgImxuZyI6IDExOS42NTI0NzksICJsYXQiOiAyOS4wODUwODksICJwcmV2X2Rpc3RhbmNlX2ttIjogMC44ODIsICJjdW11bGF0aXZlX2Rpc3RhbmNlX2ttIjogOC44MTUsICJhbWFwX21hcmtlcl91cmwiOiAiaHR0cHM6Ly91cmkuYW1hcC5jb20vbWFya2VyP3Bvc2l0aW9uPTExOS42NTI0NzksMjkuMDg1MDg5Jm5hbWU9JUU1JTk0JUFGJUU1JUFFJTgzJUU1JUFFJUEwJUU3JTg5JUE5JUU1JThDJUJCJUU5JTk5JUEyJnNyYz1jb2RleF9yb3V0ZV9tYXAmY29vcmRpbmF0ZT1nYW9kZSZjYWxsbmF0aXZlPTEifSwgeyJvcmRlciI6IDE4LCAibmFtZSI6ICLosJvlrp3or5rph5HljY7liqjnianlvbHlg4/kuK3lv4MiLCAiYWRkcmVzcyI6ICLlrr7ombnot680MTTlj7ciLCAicGhvbmUiOiAiMDU3OS04MjA4ODEwMyIsICJhcmVhIjogIiIsICJsbmciOiAxMTkuNjU2NzA5LCAibGF0IjogMjkuMDg1NzgxLCAicHJldl9kaXN0YW5jZV9rbSI6IDAuNDE4LCAiY3VtdWxhdGl2ZV9kaXN0YW5jZV9rbSI6IDkuMjMzLCAiYW1hcF9tYXJrZXJfdXJsIjogImh0dHBzOi8vdXJpLmFtYXAuY29tL21hcmtlcj9wb3NpdGlvbj0xMTkuNjU2NzA5LDI5LjA4NTc4MSZuYW1lPSVFOCVCMCU5QiVFNSVBRSU5RCVFOCVBRiU5QSVFOSU4NyU5MSVFNSU4RCU4RSVFNSU4QSVBOCVFNyU4OSVBOSVFNSVCRCVCMSVFNSU4MyU4RiVFNCVCOCVBRCVFNSVCRiU4MyZzcmM9Y29kZXhfcm91dGVfbWFwJmNvb3JkaW5hdGU9Z2FvZGUmY2FsbG5hdGl2ZT0xIn0sIHsib3JkZXIiOiAxOSwgIm5hbWUiOiAi5Lyv54i15a6g54mp5Yy76ZmiKOmHkeWNjuaAu+mZoikiLCAiYWRkcmVzcyI6ICLkuprls7Dot683MOWPt+mHkem+meW5v+WcujXmoIs15Y+35ZWG6ZO6IiwgInBob25lIjogIjA1NzktODM0Mzc3NzA7MTM5Njc0NDc3NzAiLCAiYXJlYSI6ICIiLCAibG5nIjogMTE5LjY1NDY5NCwgImxhdCI6IDI5LjA4OTk3MiwgInByZXZfZGlzdGFuY2Vfa20iOiAwLjUwNSwgImN1bXVsYXRpdmVfZGlzdGFuY2Vfa20iOiA5LjczOCwgImFtYXBfbWFya2VyX3VybCI6ICJodHRwczovL3VyaS5hbWFwLmNvbS9tYXJrZXI/cG9zaXRpb249MTE5LjY1NDY5NCwyOS4wODk5NzImbmFtZT0lRTQlQkMlQUYlRTclODglQjUlRTUlQUUlQTAlRTclODklQTklRTUlOEMlQkIlRTklOTklQTIlMjglRTklODclOTElRTUlOEQlOEUlRTYlODAlQkIlRTklOTklQTIlMjkmc3JjPWNvZGV4X3JvdXRlX21hcCZjb29yZGluYXRlPWdhb2RlJmNhbGxuYXRpdmU9MSJ9LCB7Im9yZGVyIjogMjAsICJuYW1lIjogIuS9s+mbr+WuoOeJqeS4reW/g+WMu+mZosK36aqo56eRwrflv4PogrrCt+eJmeenkSjnm5vkuJblpKnmiJDlupcpIiwgImFkZHJlc3MiOiAi5YWr5LiA5YyX6KGXNjXlj7flmInmgZLnm5vkuJblpKnln44x5bmiMTA3LTEwOOWupCIsICJwaG9uZSI6ICIxODE2NzAyOTc4MiIsICJhcmVhIjogIiIsICJsbmciOiAxMTkuNjUwOTg5LCAibGF0IjogMjkuMDk5NjUxLCAicHJldl9kaXN0YW5jZV9rbSI6IDEuMTM1LCAiY3VtdWxhdGl2ZV9kaXN0YW5jZV9rbSI6IDEwLjg3MywgImFtYXBfbWFya2VyX3VybCI6ICJodHRwczovL3VyaS5hbWFwLmNvbS9tYXJrZXI/cG9zaXRpb249MTE5LjY1MDk4OSwyOS4wOTk2NTEmbmFtZT0lRTQlQkQlQjMlRTklOUIlQUYlRTUlQUUlQTAlRTclODklQTklRTQlQjglQUQlRTUlQkYlODMlRTUlOEMlQkIlRTklOTklQTIlQzIlQjclRTklQUElQTglRTclQTclOTElQzIlQjclRTUlQkYlODMlRTglODIlQkElQzIlQjclRTclODklOTklRTclQTclOTElMjglRTclOUIlOUIlRTQlQjglOTYlRTUlQTQlQTklRTYlODglOTAlRTUlQkElOTclMjkmc3JjPWNvZGV4X3JvdXRlX21hcCZjb29yZGluYXRlPWdhb2RlJmNhbGxuYXRpdmU9MSJ9LCB7Im9yZGVyIjogMjEsICJuYW1lIjogIuWQjea1geWuoOeJqeWMu+mZoijpo5jokI3ot68pIiwgImFkZHJlc3MiOiAi6aOY6JCN6LevNDMy5Y+3IiwgInBob25lIjogIjA1NzktODM5MTg1ODg7MTU4ODg5OTA4NjgiLCAiYXJlYSI6ICIiLCAibG5nIjogMTE5LjY2MDE3OCwgImxhdCI6IDI5LjA5OTYzNywgInByZXZfZGlzdGFuY2Vfa20iOiAwLjg5MywgImN1bXVsYXRpdmVfZGlzdGFuY2Vfa20iOiAxMS43NjYsICJhbWFwX21hcmtlcl91cmwiOiAiaHR0cHM6Ly91cmkuYW1hcC5jb20vbWFya2VyP3Bvc2l0aW9uPTExOS42NjAxNzgsMjkuMDk5NjM3Jm5hbWU9JUU1JTkwJThEJUU2JUI1JTgxJUU1JUFFJUEwJUU3JTg5JUE5JUU1JThDJUJCJUU5JTk5JUEyJTI4JUU5JUEzJTk4JUU4JTkwJThEJUU4JUI3JUFGJTI5JnNyYz1jb2RleF9yb3V0ZV9tYXAmY29vcmRpbmF0ZT1nYW9kZSZjYWxsbmF0aXZlPTEifSwgeyJvcmRlciI6IDIyLCAibmFtZSI6ICLpnZLnhLblrqDnianljLvpmaIo5Lq65rCR5Lic6Lev6ZmiKSIsICJhZGRyZXNzIjogIuS6uuawkeS4nOi3rzg1MuWPtyIsICJwaG9uZSI6ICIwNTc5LTgyMjg1Mzg1OzE1MDY3NTkyODM5IiwgImFyZWEiOiAi5Lq65rCR5Lic6LevIiwgImxuZyI6IDExOS42Njg2OTksICJsYXQiOiAyOS4xMDg4NCwgInByZXZfZGlzdGFuY2Vfa20iOiAxLjMxNiwgImN1bXVsYXRpdmVfZGlzdGFuY2Vfa20iOiAxMy4wODIsICJhbWFwX21hcmtlcl91cmwiOiAiaHR0cHM6Ly91cmkuYW1hcC5jb20vbWFya2VyP3Bvc2l0aW9uPTExOS42Njg2OTksMjkuMTA4ODQwJm5hbWU9JUU5JTlEJTkyJUU3JTg0JUI2JUU1JUFFJUEwJUU3JTg5JUE5JUU1JThDJUJCJUU5JTk5JUEyJTI4JUU0JUJBJUJBJUU2JUIwJTkxJUU0JUI4JTlDJUU4JUI3JUFGJUU5JTk5JUEyJTI5JnNyYz1jb2RleF9yb3V0ZV9tYXAmY29vcmRpbmF0ZT1nYW9kZSZjYWxsbmF0aXZlPTEifSwgeyJvcmRlciI6IDIzLCAibmFtZSI6ICLotZvpgqPliqjnianljLvpmaIo5Lic5biC5YyX6KGX5bqXKSIsICJhZGRyZXNzIjogIuS4nOW4guWMl+ihlzEzNTblj7ciLCAicGhvbmUiOiAiMDU3OS04MzEyMzY2NiIsICJhcmVhIjogIiIsICJsbmciOiAxMTkuNjYzNjEyLCAibGF0IjogMjkuMTIyMzk1LCAicHJldl9kaXN0YW5jZV9rbSI6IDEuNTg2LCAiY3VtdWxhdGl2ZV9kaXN0YW5jZV9rbSI6IDE0LjY2OSwgImFtYXBfbWFya2VyX3VybCI6ICJodHRwczovL3VyaS5hbWFwLmNvbS9tYXJrZXI/cG9zaXRpb249MTE5LjY2MzYxMiwyOS4xMjIzOTUmbmFtZT0lRTglQjUlOUIlRTklODIlQTMlRTUlOEElQTglRTclODklQTklRTUlOEMlQkIlRTklOTklQTIlMjglRTQlQjglOUMlRTUlQjglODIlRTUlOEMlOTclRTglQTElOTclRTUlQkElOTclMjkmc3JjPWNvZGV4X3JvdXRlX21hcCZjb29yZGluYXRlPWdhb2RlJmNhbGxuYXRpdmU9MSJ9LCB7Im9yZGVyIjogMjQsICJuYW1lIjogIuW6t+S6puWuoOeJqeWMu+mZoiIsICJhZGRyZXNzIjogIuWFq+S4gOWMl+ihlzEwNDjlj7ciLCAicGhvbmUiOiAiMTk1NDg5NzE5MDAiLCAiYXJlYSI6ICIiLCAibG5nIjogMTE5LjY1MjczLCAibGF0IjogMjkuMTE3MjAxLCAicHJldl9kaXN0YW5jZV9rbSI6IDEuMjA1LCAiY3VtdWxhdGl2ZV9kaXN0YW5jZV9rbSI6IDE1Ljg3MywgImFtYXBfbWFya2VyX3VybCI6ICJodHRwczovL3VyaS5hbWFwLmNvbS9tYXJrZXI/cG9zaXRpb249MTE5LjY1MjczMCwyOS4xMTcyMDEmbmFtZT0lRTUlQkElQjclRTQlQkElQTYlRTUlQUUlQTAlRTclODklQTklRTUlOEMlQkIlRTklOTklQTImc3JjPWNvZGV4X3JvdXRlX21hcCZjb29yZGluYXRlPWdhb2RlJmNhbGxuYXRpdmU9MSJ9LCB7Im9yZGVyIjogMjUsICJuYW1lIjogIuS9s+mbr+WuoOeJqeWMu+mZosK35a6g5L+d5a6a54K5KOWFq+S4gOWMl+ihl+WIhumZoikiLCAiYWRkcmVzcyI6ICLlhavkuIDljJfooZc5NTLlj7ciLCAicGhvbmUiOiAiMTgwNDIyMjUyNTUiLCAiYXJlYSI6ICIiLCAibG5nIjogMTE5LjY1Mjc0MiwgImxhdCI6IDI5LjExNTU1MiwgInByZXZfZGlzdGFuY2Vfa20iOiAwLjE4MywgImN1bXVsYXRpdmVfZGlzdGFuY2Vfa20iOiAxNi4wNTcsICJhbWFwX21hcmtlcl91cmwiOiAiaHR0cHM6Ly91cmkuYW1hcC5jb20vbWFya2VyP3Bvc2l0aW9uPTExOS42NTI3NDIsMjkuMTE1NTUyJm5hbWU9JUU0JUJEJUIzJUU5JTlCJUFGJUU1JUFFJUEwJUU3JTg5JUE5JUU1JThDJUJCJUU5JTk5JUEyJUMyJUI3JUU1JUFFJUEwJUU0JUJGJTlEJUU1JUFFJTlBJUU3JTgyJUI5JTI4JUU1JTg1JUFCJUU0JUI4JTgwJUU1JThDJTk3JUU4JUExJTk3JUU1JTg4JTg2JUU5JTk5JUEyJTI5JnNyYz1jb2RleF9yb3V0ZV9tYXAmY29vcmRpbmF0ZT1nYW9kZSZjYWxsbmF0aXZlPTEifSwgeyJvcmRlciI6IDI2LCAibmFtZSI6ICLotJ3mo67jga7lrqDljLsiLCAiYWRkcmVzcyI6ICLkurrmsJHopb/ot68xMzYtMTM45Y+36LSd5qOu44Gu5a6g5Yy7IiwgInBob25lIjogIjE1MDY3MDY1MjI2IiwgImFyZWEiOiAiIiwgImxuZyI6IDExOS42NDk0NDEsICJsYXQiOiAyOS4xMDg1MzcsICJwcmV2X2Rpc3RhbmNlX2ttIjogMC44NDMsICJjdW11bGF0aXZlX2Rpc3RhbmNlX2ttIjogMTYuOSwgImFtYXBfbWFya2VyX3VybCI6ICJodHRwczovL3VyaS5hbWFwLmNvbS9tYXJrZXI/cG9zaXRpb249MTE5LjY0OTQ0MSwyOS4xMDg1MzcmbmFtZT0lRTglQjQlOUQlRTYlQTMlQUUlRTMlODElQUUlRTUlQUUlQTAlRTUlOEMlQkImc3JjPWNvZGV4X3JvdXRlX21hcCZjb29yZGluYXRlPWdhb2RlJmNhbGxuYXRpdmU9MSJ9LCB7Im9yZGVyIjogMjcsICJuYW1lIjogIk1ywrdYdeWKqOeJqeWMu+mZoijkuJzmlrnlt7Tpu45C5bqn5bqXKSIsICJhZGRyZXNzIjogIuWbnua6quihlzI2NuWPtyIsICJwaG9uZSI6ICIwNTc5LTgyNTY2MDg4OzE4MDA2NTA1NjYwIiwgImFyZWEiOiAiIiwgImxuZyI6IDExOS42NTAyMzcsICJsYXQiOiAyOS4xMDYyMDQsICJwcmV2X2Rpc3RhbmNlX2ttIjogMC4yNzEsICJjdW11bGF0aXZlX2Rpc3RhbmNlX2ttIjogMTcuMTcxLCAiYW1hcF9tYXJrZXJfdXJsIjogImh0dHBzOi8vdXJpLmFtYXAuY29tL21hcmtlcj9wb3NpdGlvbj0xMTkuNjUwMjM3LDI5LjEwNjIwNCZuYW1lPU1yJUMyJUI3WHUlRTUlOEElQTglRTclODklQTklRTUlOEMlQkIlRTklOTklQTIlMjglRTQlQjglOUMlRTYlOTYlQjklRTUlQjclQjQlRTklQkIlOEVCJUU1JUJBJUE3JUU1JUJBJTk3JTI5JnNyYz1jb2RleF9yb3V0ZV9tYXAmY29vcmRpbmF0ZT1nYW9kZSZjYWxsbmF0aXZlPTEifSwgeyJvcmRlciI6IDI4LCAibmFtZSI6ICLlrqDniLHliqjnianor4rmiYAo5bi45LmQ5be3KSIsICJhZGRyZXNzIjogIumdkuW5tOi3r+W4uOS5kOW3tzI25Y+3IiwgInBob25lIjogIjEzOTU3OTc3ODE2OzE4OTU3OTE1OTk4IiwgImFyZWEiOiAi5LqU5LiA6LevIiwgImxuZyI6IDExOS42NDcxMzcsICJsYXQiOiAyOS4xMDU1ODIsICJwcmV2X2Rpc3RhbmNlX2ttIjogMC4zMDksICJjdW11bGF0aXZlX2Rpc3RhbmNlX2ttIjogMTcuNDgsICJhbWFwX21hcmtlcl91cmwiOiAiaHR0cHM6Ly91cmkuYW1hcC5jb20vbWFya2VyP3Bvc2l0aW9uPTExOS42NDcxMzcsMjkuMTA1NTgyJm5hbWU9JUU1JUFFJUEwJUU3JTg4JUIxJUU1JThBJUE4JUU3JTg5JUE5JUU4JUFGJThBJUU2JTg5JTgwJTI4JUU1JUI4JUI4JUU0JUI5JTkwJUU1JUI3JUI3JTI5JnNyYz1jb2RleF9yb3V0ZV9tYXAmY29vcmRpbmF0ZT1nYW9kZSZjYWxsbmF0aXZlPTEifSwgeyJvcmRlciI6IDI5LCAibmFtZSI6ICLljZror5rlrqDnianor4rmiYAiLCAiYWRkcmVzcyI6ICLkupTkuIDot68zOTLlj7ciLCAicGhvbmUiOiAiMDU3OS04MzczMzEyOCIsICJhcmVhIjogIuS6lOS4gOi3ryIsICJsbmciOiAxMTkuNjQzNjg1LCAibGF0IjogMjkuMTA1MzY2LCAicHJldl9kaXN0YW5jZV9rbSI6IDAuMzM2LCAiY3VtdWxhdGl2ZV9kaXN0YW5jZV9rbSI6IDE3LjgxNiwgImFtYXBfbWFya2VyX3VybCI6ICJodHRwczovL3VyaS5hbWFwLmNvbS9tYXJrZXI/cG9zaXRpb249MTE5LjY0MzY4NSwyOS4xMDUzNjYmbmFtZT0lRTUlOEQlOUElRTglQUYlOUElRTUlQUUlQTAlRTclODklQTklRTglQUYlOEElRTYlODklODAmc3JjPWNvZGV4X3JvdXRlX21hcCZjb29yZGluYXRlPWdhb2RlJmNhbGxuYXRpdmU9MSJ9LCB7Im9yZGVyIjogMzAsICJuYW1lIjogIuaYpeeHleWuoOeJqeWMu+mZoiIsICJhZGRyZXNzIjogIiIsICJwaG9uZSI6ICIxMzczNTc2Mzk2MyIsICJhcmVhIjogIiIsICJsbmciOiAxMTkuNjM0MDE2LCAibGF0IjogMjkuMTAzNDEzLCAicHJldl9kaXN0YW5jZV9rbSI6IDAuOTY0LCAiY3VtdWxhdGl2ZV9kaXN0YW5jZV9rbSI6IDE4Ljc4LCAiYW1hcF9tYXJrZXJfdXJsIjogImh0dHBzOi8vdXJpLmFtYXAuY29tL21hcmtlcj9wb3NpdGlvbj0xMTkuNjM0MDE2LDI5LjEwMzQxMyZuYW1lPSVFNiU5OCVBNSVFNyU4NyU5NSVFNSVBRSVBMCVFNyU4OSVBOSVFNSU4QyVCQiVFOSU5OSVBMiZzcmM9Y29kZXhfcm91dGVfbWFwJmNvb3JkaW5hdGU9Z2FvZGUmY2FsbG5hdGl2ZT0xIn0sIHsib3JkZXIiOiAzMSwgIm5hbWUiOiAi5Y2a6ZuF5a6g54mp5Yy76Zmiwrfnu7zlkIjlnovniqznjKvlhajnp5Hor4rnlpfkuK3lv4MiLCAiYWRkcmVzcyI6ICLln47opb/ooZfpgZPop6PmlL7opb/ot685Mjflj7ciLCAicGhvbmUiOiAiMTMwNDk5OTkwNjQiLCAiYXJlYSI6ICIiLCAibG5nIjogMTE5LjYzMzU4MywgImxhdCI6IDI5LjA5OTE1OCwgInByZXZfZGlzdGFuY2Vfa20iOiAwLjQ3NSwgImN1bXVsYXRpdmVfZGlzdGFuY2Vfa20iOiAxOS4yNTUsICJhbWFwX21hcmtlcl91cmwiOiAiaHR0cHM6Ly91cmkuYW1hcC5jb20vbWFya2VyP3Bvc2l0aW9uPTExOS42MzM1ODMsMjkuMDk5MTU4Jm5hbWU9JUU1JThEJTlBJUU5JTlCJTg1JUU1JUFFJUEwJUU3JTg5JUE5JUU1JThDJUJCJUU5JTk5JUEyJUMyJUI3JUU3JUJCJUJDJUU1JTkwJTg4JUU1JTlFJThCJUU3JThBJUFDJUU3JThDJUFCJUU1JTg1JUE4JUU3JUE3JTkxJUU4JUFGJThBJUU3JTk2JTk3JUU0JUI4JUFEJUU1JUJGJTgzJnNyYz1jb2RleF9yb3V0ZV9tYXAmY29vcmRpbmF0ZT1nYW9kZSZjYWxsbmF0aXZlPTEifSwgeyJvcmRlciI6IDMyLCAibmFtZSI6ICLkv67njKvkv67ni5flsI/liqjniannu7Tkv67kuK3lv4MiLCAiYWRkcmVzcyI6ICLlm5vlraPkurrlrrbljJfpl6jml4EiLCAicGhvbmUiOiAiIiwgImFyZWEiOiAiIiwgImxuZyI6IDExOS42MzM3MTEsICJsYXQiOiAyOS4wOTkxMjQsICJwcmV2X2Rpc3RhbmNlX2ttIjogMC4wMTMsICJjdW11bGF0aXZlX2Rpc3RhbmNlX2ttIjogMTkuMjY4LCAiYW1hcF9tYXJrZXJfdXJsIjogImh0dHBzOi8vdXJpLmFtYXAuY29tL21hcmtlcj9wb3NpdGlvbj0xMTkuNjMzNzExLDI5LjA5OTEyNCZuYW1lPSVFNCVCRiVBRSVFNyU4QyVBQiVFNCVCRiVBRSVFNyU4QiU5NyVFNSVCMCU4RiVFNSU4QSVBOCVFNyU4OSVBOSVFNyVCQiVCNCVFNCVCRiVBRSVFNCVCOCVBRCVFNSVCRiU4MyZzcmM9Y29kZXhfcm91dGVfbWFwJmNvb3JkaW5hdGU9Z2FvZGUmY2FsbG5hdGl2ZT0xIn0sIHsib3JkZXIiOiAzMywgIm5hbWUiOiAi57Gz5oGp5a6g54mp5Yy76ZmiwrflpJzpl7TmgKXor4oo5a6g5Yy75L+d5a6a54K5KSIsICJhZGRyZXNzIjogIuWPjOa6quilv+i3rzc1OC03NjDlj7ciLCAicGhvbmUiOiAiMTMzMDU3OTQwNDQiLCAiYXJlYSI6ICIiLCAibG5nIjogMTE5LjYzNDcxMSwgImxhdCI6IDI5LjA4Njc0NiwgInByZXZfZGlzdGFuY2Vfa20iOiAxLjM4LCAiY3VtdWxhdGl2ZV9kaXN0YW5jZV9rbSI6IDIwLjY0OCwgImFtYXBfbWFya2VyX3VybCI6ICJodHRwczovL3VyaS5hbWFwLmNvbS9tYXJrZXI/cG9zaXRpb249MTE5LjYzNDcxMSwyOS4wODY3NDYmbmFtZT0lRTclQjElQjMlRTYlODElQTklRTUlQUUlQTAlRTclODklQTklRTUlOEMlQkIlRTklOTklQTIlQzIlQjclRTUlQTQlOUMlRTklOTclQjQlRTYlODAlQTUlRTglQUYlOEElMjglRTUlQUUlQTAlRTUlOEMlQkIlRTQlQkYlOUQlRTUlQUUlOUElRTclODIlQjklMjkmc3JjPWNvZGV4X3JvdXRlX21hcCZjb29yZGluYXRlPWdhb2RlJmNhbGxuYXRpdmU9MSJ9LCB7Im9yZGVyIjogMzQsICJuYW1lIjogIuWPi+eIseWuoOeJqeWMu+mZoiIsICJhZGRyZXNzIjogIuWPjOmmqOi3rzI4Ni0yODgtMjkw5Y+3IiwgInBob25lIjogIjA1NzktODI4MzMxMTI7MTUyNjczMTY2MDY7MTgxMDU3OTg4MDYiLCAiYXJlYSI6ICIiLCAibG5nIjogMTE5LjYzODg3NCwgImxhdCI6IDI5LjA4NTIyNSwgInByZXZfZGlzdGFuY2Vfa20iOiAwLjQzOCwgImN1bXVsYXRpdmVfZGlzdGFuY2Vfa20iOiAyMS4wODYsICJhbWFwX21hcmtlcl91cmwiOiAiaHR0cHM6Ly91cmkuYW1hcC5jb20vbWFya2VyP3Bvc2l0aW9uPTExOS42Mzg4NzQsMjkuMDg1MjI1Jm5hbWU9JUU1JThGJThCJUU3JTg4JUIxJUU1JUFFJUEwJUU3JTg5JUE5JUU1JThDJUJCJUU5JTk5JUEyJnNyYz1jb2RleF9yb3V0ZV9tYXAmY29vcmRpbmF0ZT1nYW9kZSZjYWxsbmF0aXZlPTEifSwgeyJvcmRlciI6IDM1LCAibmFtZSI6ICLpmarkvLTlrqDnianor4rmiYAiLCAiYWRkcmVzcyI6ICLlrr7ombnot68xMTI45Y+3IiwgInBob25lIjogIjE1MTY3OTY3MDA5IiwgImFyZWEiOiAiIiwgImxuZyI6IDExOS42Mzk0LCAibGF0IjogMjkuMDgzMDIsICJwcmV2X2Rpc3RhbmNlX2ttIjogMC4yNSwgImN1bXVsYXRpdmVfZGlzdGFuY2Vfa20iOiAyMS4zMzcsICJhbWFwX21hcmtlcl91cmwiOiAiaHR0cHM6Ly91cmkuYW1hcC5jb20vbWFya2VyP3Bvc2l0aW9uPTExOS42Mzk0MDAsMjkuMDgzMDIwJm5hbWU9JUU5JTk5JUFBJUU0JUJDJUI0JUU1JUFFJUEwJUU3JTg5JUE5JUU4JUFGJThBJUU2JTg5JTgwJnNyYz1jb2RleF9yb3V0ZV9tYXAmY29vcmRpbmF0ZT1nYW9kZSZjYWxsbmF0aXZlPTEifSwgeyJvcmRlciI6IDM2LCAibmFtZSI6ICLkuInljYPlrqDnianljLvpmaIiLCAiYWRkcmVzcyI6ICLlr7rlkI7nmofooZc1MOWPt+WIqeeOm+Wwj+WMukLluaIxMDUiLCAicGhvbmUiOiAiMTgxNTc5OTgzODkiLCAiYXJlYSI6ICIiLCAibG5nIjogMTE5LjY0MzIyMSwgImxhdCI6IDI5LjA4MTQ4MSwgInByZXZfZGlzdGFuY2Vfa20iOiAwLjQwOSwgImN1bXVsYXRpdmVfZGlzdGFuY2Vfa20iOiAyMS43NDYsICJhbWFwX21hcmtlcl91cmwiOiAiaHR0cHM6Ly91cmkuYW1hcC5jb20vbWFya2VyP3Bvc2l0aW9uPTExOS42NDMyMjEsMjkuMDgxNDgxJm5hbWU9JUU0JUI4JTg5JUU1JThEJTgzJUU1JUFFJUEwJUU3JTg5JUE5JUU1JThDJUJCJUU5JTk5JUEyJnNyYz1jb2RleF9yb3V0ZV9tYXAmY29vcmRpbmF0ZT1nYW9kZSZjYWxsbmF0aXZlPTEifSwgeyJvcmRlciI6IDM3LCAibmFtZSI6ICLkvbPpm6/lrqDnianljLvpmaLCt+WuoOS/neWumueCucK354qs54yr5YWo56eRKOadjua4lOi3r+WIhumZoikiLCAiYWRkcmVzcyI6ICLmnY7muJTot68xNTcx5Y+3IiwgInBob25lIjogIjE1MzI1ODkwNDU2IiwgImFyZWEiOiAiIiwgImxuZyI6IDExOS42MzUyMDIsICJsYXQiOiAyOS4wNzgyNjUsICJwcmV2X2Rpc3RhbmNlX2ttIjogMC44NTcsICJjdW11bGF0aXZlX2Rpc3RhbmNlX2ttIjogMjIuNjAzLCAiYW1hcF9tYXJrZXJfdXJsIjogImh0dHBzOi8vdXJpLmFtYXAuY29tL21hcmtlcj9wb3NpdGlvbj0xMTkuNjM1MjAyLDI5LjA3ODI2NSZuYW1lPSVFNCVCRCVCMyVFOSU5QiVBRiVFNSVBRSVBMCVFNyU4OSVBOSVFNSU4QyVCQiVFOSU5OSVBMiVDMiVCNyVFNSVBRSVBMCVFNCVCRiU5RCVFNSVBRSU5QSVFNyU4MiVCOSVDMiVCNyVFNyU4QSVBQyVFNyU4QyVBQiVFNSU4NSVBOCVFNyVBNyU5MSUyOCVFNiU5RCU4RSVFNiVCOCU5NCVFOCVCNyVBRiVFNSU4OCU4NiVFOSU5OSVBMiUyOSZzcmM9Y29kZXhfcm91dGVfbWFwJmNvb3JkaW5hdGU9Z2FvZGUmY2FsbG5hdGl2ZT0xIn0sIHsib3JkZXIiOiAzOCwgIm5hbWUiOiAi5a625Y+L5a6g54mp5Yy76ZmiIiwgImFkZHJlc3MiOiAi5YWr6L6+6LevOTczLTk3NeWPtyIsICJwaG9uZSI6ICIxMzk1Nzk3NTgyMiIsICJhcmVhIjogIiIsICJsbmciOiAxMTkuNjE0MzY3LCAibGF0IjogMjkuMDY0NiwgInByZXZfZGlzdGFuY2Vfa20iOiAyLjUzMiwgImN1bXVsYXRpdmVfZGlzdGFuY2Vfa20iOiAyNS4xMzUsICJhbWFwX21hcmtlcl91cmwiOiAiaHR0cHM6Ly91cmkuYW1hcC5jb20vbWFya2VyP3Bvc2l0aW9uPTExOS42MTQzNjcsMjkuMDY0NjAwJm5hbWU9JUU1JUFFJUI2JUU1JThGJThCJUU1JUFFJUEwJUU3JTg5JUE5JUU1JThDJUJCJUU5JTk5JUEyJnNyYz1jb2RleF9yb3V0ZV9tYXAmY29vcmRpbmF0ZT1nYW9kZSZjYWxsbmF0aXZlPTEifSwgeyJvcmRlciI6IDM5LCAibmFtZSI6ICLnsbPmganlrqDnianljLvpmaLCt+mqqOenkeiviueWl+S4reW/g8K35aSc6Ze06YeN55eFKOS4h+azsOmZouWMuikiLCAiYWRkcmVzcyI6ICLlrr7ombnopb/ot68yOTI15Y+3IiwgInBob25lIjogIjE5OTQxNDEyOTI1IiwgImFyZWEiOiAiIiwgImxuZyI6IDExOS41NzIzNzUsICJsYXQiOiAyOS4wODQwNiwgInByZXZfZGlzdGFuY2Vfa20iOiA0LjYxOSwgImN1bXVsYXRpdmVfZGlzdGFuY2Vfa20iOiAyOS43NTQsICJhbWFwX21hcmtlcl91cmwiOiAiaHR0cHM6Ly91cmkuYW1hcC5jb20vbWFya2VyP3Bvc2l0aW9uPTExOS41NzIzNzUsMjkuMDg0MDYwJm5hbWU9JUU3JUIxJUIzJUU2JTgxJUE5JUU1JUFFJUEwJUU3JTg5JUE5JUU1JThDJUJCJUU5JTk5JUEyJUMyJUI3JUU5JUFBJUE4JUU3JUE3JTkxJUU4JUFGJThBJUU3JTk2JTk3JUU0JUI4JUFEJUU1JUJGJTgzJUMyJUI3JUU1JUE0JTlDJUU5JTk3JUI0JUU5JTg3JThEJUU3JTk3JTg1JTI4JUU0JUI4JTg3JUU2JUIzJUIwJUU5JTk5JUEyJUU1JThDJUJBJTI5JnNyYz1jb2RleF9yb3V0ZV9tYXAmY29vcmRpbmF0ZT1nYW9kZSZjYWxsbmF0aXZlPTEifSwgeyJvcmRlciI6IDQwLCAibmFtZSI6ICLlv4Por7rlrqDnianljLvpmaIiLCAiYWRkcmVzcyI6ICLmlofmtKXot681MTnlj7ciLCAicGhvbmUiOiAiMTgxNTgzOTA5OTUiLCAiYXJlYSI6ICIiLCAibG5nIjogMTE5LjU2ODA3NSwgImxhdCI6IDI5LjA4OTUyNSwgInByZXZfZGlzdGFuY2Vfa20iOiAwLjczNywgImN1bXVsYXRpdmVfZGlzdGFuY2Vfa20iOiAzMC40OTEsICJhbWFwX21hcmtlcl91cmwiOiAiaHR0cHM6Ly91cmkuYW1hcC5jb20vbWFya2VyP3Bvc2l0aW9uPTExOS41NjgwNzUsMjkuMDg5NTI1Jm5hbWU9JUU1JUJGJTgzJUU4JUFGJUJBJUU1JUFFJUEwJUU3JTg5JUE5JUU1JThDJUJCJUU5JTk5JUEyJnNyYz1jb2RleF9yb3V0ZV9tYXAmY29vcmRpbmF0ZT1nYW9kZSZjYWxsbmF0aXZlPTEifSwgeyJvcmRlciI6IDQxLCAibmFtZSI6ICLnvKTombnlrqDnianljLvpmaLniqznjKvor4rnlpfkuK3lv4MiLCAiYWRkcmVzcyI6ICLljY7pvpnljZfooZcxMTg15Y+3IiwgInBob25lIjogIjE1Mzk3NTk1OTA5OzE4OTU3OTc1OTA5OzE4OTU3OTkwNTI4IiwgImFyZWEiOiAiIiwgImxuZyI6IDExOS41NjU2MjMsICJsYXQiOiAyOS4wODQ3OTQsICJwcmV2X2Rpc3RhbmNlX2ttIjogMC41NzgsICJjdW11bGF0aXZlX2Rpc3RhbmNlX2ttIjogMzEuMDY5LCAiYW1hcF9tYXJrZXJfdXJsIjogImh0dHBzOi8vdXJpLmFtYXAuY29tL21hcmtlcj9wb3NpdGlvbj0xMTkuNTY1NjIzLDI5LjA4NDc5NCZuYW1lPSVFNyVCQyVBNCVFOCU5OSVCOSVFNSVBRSVBMCVFNyU4OSVBOSVFNSU4QyVCQiVFOSU5OSVBMiVFNyU4QSVBQyVFNyU4QyVBQiVFOCVBRiU4QSVFNyU5NiU5NyVFNCVCOCVBRCVFNSVCRiU4MyZzcmM9Y29kZXhfcm91dGVfbWFwJmNvb3JkaW5hdGU9Z2FvZGUmY2FsbG5hdGl2ZT0xIn0sIHsib3JkZXIiOiA0MiwgIm5hbWUiOiAi55CF55CK55Wc56a95pyN5Yqh6YOoIiwgImFkZHJlc3MiOiAi6YCa5Y2X6Lev5LiO5bOw5Y2O6KGX5Lqk5Y+J5Y+j6KW/5Y2XNjDnsbMiLCAicGhvbmUiOiAiIiwgImFyZWEiOiAiIiwgImxuZyI6IDExOS40OTg5MjUsICJsYXQiOiAyOS4wMDIzNzUsICJwcmV2X2Rpc3RhbmNlX2ttIjogMTEuMjI2LCAiY3VtdWxhdGl2ZV9kaXN0YW5jZV9rbSI6IDQyLjI5NSwgImFtYXBfbWFya2VyX3VybCI6ICJodHRwczovL3VyaS5hbWFwLmNvbS9tYXJrZXI/cG9zaXRpb249MTE5LjQ5ODkyNSwyOS4wMDIzNzUmbmFtZT0lRTclOTAlODUlRTclOTAlOEElRTclOTUlOUMlRTclQTYlQkQlRTYlOUMlOEQlRTUlOEElQTElRTklODMlQTgmc3JjPWNvZGV4X3JvdXRlX21hcCZjb29yZGluYXRlPWdhb2RlJmNhbGxuYXRpdmU9MSJ9XX0=";
     const password = String.fromCharCode(118,101,116,50,48,50,54);
-    const gate = document.getElementById("gate");
-    const app = document.getElementById("app");
-    const passInput = document.getElementById("pass");
-    const unlock = document.getElementById("unlock");
-    const error = document.getElementById("error");
-    let map, bounds, markers = [], clinics = [];
+    const state = {
+      catalog: null,
+      selectedProvince: null,
+      selectedCity: null,
+      selectedDistrict: null,
+      districtPayload: null,
+      map: null,
+      markerLayer: null,
+      routeLayer: null,
+      bounds: null,
+      markers: [],
+    };
+    window.vetmapState = state;
 
+    const el = (id) => document.getElementById(id);
     const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, ch => ({
       "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
     }[ch]));
+    const qs = new URLSearchParams(location.search);
 
-    function decodePayload() {
-      const binary = atob(encodedPayload);
-      const bytes = Uint8Array.from(binary, ch => ch.charCodeAt(0));
-      return JSON.parse(new TextDecoder("utf-8").decode(bytes));
-    }
-
-    function unlockPage() {
-      if (passInput.value !== password) {
-        error.textContent = "口令不对";
-        passInput.select();
-        return;
-      }
-      localStorage.setItem("vetmap_access", "ok");
-      gate.classList.add("hidden");
-      app.classList.remove("hidden");
-      initMap();
-    }
-
-    unlock.addEventListener("click", unlockPage);
-    passInput.addEventListener("keydown", event => {
+    el("unlock").addEventListener("click", unlockPage);
+    el("pass").addEventListener("keydown", event => {
       if (event.key === "Enter") unlockPage();
     });
 
-    function initMap() {
-      if (map) return;
-      const payload = decodePayload();
-      clinics = payload.rows;
-      const summary = payload.summary;
-      document.getElementById("count").textContent = summary.count;
-      document.getElementById("distance").textContent = Number(summary.total_distance_km).toFixed(1) + " km";
+    async function unlockPage() {
+      if (el("pass").value !== password) {
+        el("error").textContent = "口令不对";
+        el("pass").select();
+        return;
+      }
+      localStorage.setItem("vetmap_access", "ok");
+      el("gate").classList.add("hidden");
+      el("app").classList.remove("hidden");
+      await boot();
+    }
 
-      map = L.map("map", { zoomControl: true, preferCanvas: true });
+    async function boot() {
+      if (state.catalog) return;
+      state.catalog = await fetchJson("data/catalog.json");
+      initMap();
+      buildSelectors();
+      hydrateFromUrl();
+      bindControls();
+    }
+
+    async function fetchJson(url) {
+      const res = await fetch(url, { cache: "no-cache" });
+      if (!res.ok) throw new Error(`加载失败：${url}`);
+      return res.json();
+    }
+
+    function initMap() {
+      state.map = L.map("map", { zoomControl: true, preferCanvas: true });
       L.tileLayer("https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}", {
         subdomains: ["1", "2", "3", "4"],
         maxZoom: 19,
         attribution: "高德地图"
-      }).addTo(map);
+      }).addTo(state.map);
+      state.markerLayer = L.layerGroup().addTo(state.map);
+      state.routeLayer = L.layerGroup().addTo(state.map);
+      state.map.setView([32.5, 113.5], 4);
+    }
 
-      const latlngs = clinics.map(p => [p.lat, p.lng]);
-      bounds = L.latLngBounds(latlngs);
-      L.polyline(latlngs, { color: "#db4c15", weight: 4, opacity: 0.9 }).addTo(map);
-      map.fitBounds(bounds, { padding: [26, 26] });
+    function buildSelectors() {
+      const provinces = state.catalog.provinces;
+      fillSelect(el("province"), provinces, "选择省份");
+      el("province").addEventListener("change", () => {
+        state.selectedProvince = findById(provinces, el("province").value);
+        state.selectedCity = null;
+        state.selectedDistrict = null;
+        fillCitySelect();
+        renderDirectory();
+      });
+      el("city").addEventListener("change", () => {
+        state.selectedCity = findById(state.selectedProvince?.cities ?? [], el("city").value);
+        state.selectedDistrict = null;
+        fillDistrictSelect();
+        renderDirectory();
+      });
+      el("district").addEventListener("change", () => {
+        state.selectedDistrict = findById(state.selectedCity?.districts ?? [], el("district").value);
+        if (state.selectedDistrict) loadDistrict(state.selectedDistrict.id);
+      });
+    }
 
-      const list = document.getElementById("list");
-      list.innerHTML = "";
-      clinics.forEach((p, index) => {
-        const cls = index === 0 ? "number-marker start" : index === clinics.length - 1 ? "number-marker end" : "number-marker";
+    function fillSelect(select, items, placeholder) {
+      select.innerHTML = `<option value="">${placeholder}</option>` + items.map(item =>
+        `<option value="${item.id}">${escapeHtml(item.name)}（${item.count}）</option>`
+      ).join("");
+    }
+
+    function fillCitySelect() {
+      fillSelect(el("city"), state.selectedProvince?.cities ?? [], "选择城市");
+      fillDistrictSelect();
+    }
+
+    function fillDistrictSelect() {
+      fillSelect(el("district"), state.selectedCity?.districts ?? [], "选择区县");
+    }
+
+    function findById(items, id) {
+      return items.find(item => item.id === id) ?? null;
+    }
+
+    function findDistrict(id) {
+      for (const province of state.catalog.provinces) {
+        for (const city of province.cities) {
+          const district = city.districts.find(item => item.id === id);
+          if (district) return { province, city, district };
+        }
+      }
+      return null;
+    }
+
+    function hydrateFromUrl() {
+      const id = qs.get("id") || state.catalog.default_district_id;
+      const hit = findDistrict(id);
+      if (hit) {
+        state.selectedProvince = hit.province;
+        state.selectedCity = hit.city;
+        state.selectedDistrict = hit.district;
+        el("province").value = hit.province.id;
+        fillCitySelect();
+        el("city").value = hit.city.id;
+        fillDistrictSelect();
+        el("district").value = hit.district.id;
+        loadDistrict(hit.district.id, false);
+      } else {
+        renderDirectory();
+      }
+    }
+
+    function bindControls() {
+      el("fit").addEventListener("click", () => {
+        if (state.bounds) state.map.fitBounds(state.bounds, { padding: [26, 26] });
+      });
+      el("share").addEventListener("click", async () => {
+        const url = location.href;
+        try {
+          await navigator.clipboard.writeText(url);
+          el("share").textContent = "已复制";
+          setTimeout(() => el("share").textContent = "复制链接", 1200);
+        } catch {
+          prompt("复制这个链接", url);
+        }
+      });
+      el("search").addEventListener("input", () => {
+        if (state.districtPayload) filterStops();
+        else renderDirectory();
+      });
+      el("routeToggle").addEventListener("change", () => {
+        const show = el("routeToggle").checked;
+        if (show) {
+          state.routeLayer.addTo(state.map);
+        } else {
+          state.map.removeLayer(state.routeLayer);
+        }
+      });
+    }
+
+    function clearMap() {
+      state.markerLayer.clearLayers();
+      state.routeLayer.clearLayers();
+      state.markers = [];
+      state.bounds = null;
+    }
+
+    function renderDirectory() {
+      state.districtPayload = null;
+      clearMap();
+      const province = state.selectedProvince;
+      const city = state.selectedCity;
+      el("title").textContent = city ? `${province.name} · ${city.name}` : province ? province.name : "兽医地图";
+      el("clinicCount").textContent = city?.count ?? province?.count ?? state.catalog.counts.clinics;
+      el("districtCount").textContent = city?.district_count ?? province?.district_count ?? state.catalog.counts.districts;
+      el("distance").textContent = "--";
+      el("note").textContent = "选择省、市、区县后，只加载该区县数据；每个区县都有独立分享地址。";
+
+      const term = el("search").value.trim().toLowerCase();
+      const districts = city ? city.districts : province ? province.cities.flatMap(c => c.districts.map(d => ({ ...d, city_name: c.name }))) : state.catalog.provinces.flatMap(p => p.cities.flatMap(c => c.districts.map(d => ({ ...d, province_name: p.name, city_name: c.name }))));
+      const filtered = districts.filter(d => !term || `${d.province_name ?? ""} ${d.city_name ?? ""} ${d.name}`.toLowerCase().includes(term));
+      el("content").innerHTML = `
+        <div class="directory-title">共 ${filtered.length} 个区县，点击进入独立路线页。</div>
+        <div class="district-grid">
+          ${filtered.map(d => `
+            <article class="district-card">
+              <div>
+                <b>${escapeHtml(d.name)}</b>
+                <span>${escapeHtml([d.province_name, d.city_name].filter(Boolean).join(" · "))} · ${d.count} 家</span>
+              </div>
+              <button type="button" data-district="${d.id}">进入</button>
+            </article>
+          `).join("")}
+        </div>
+      `;
+      el("content").querySelectorAll("[data-district]").forEach(button => {
+        button.addEventListener("click", () => loadDistrict(button.dataset.district));
+      });
+      history.replaceState(null, "", location.pathname);
+    }
+
+    async function loadDistrict(id, updateUrl = true) {
+      const hit = findDistrict(id);
+      if (!hit) return;
+      state.selectedProvince = hit.province;
+      state.selectedCity = hit.city;
+      state.selectedDistrict = hit.district;
+      el("province").value = hit.province.id;
+      fillCitySelect();
+      el("city").value = hit.city.id;
+      fillDistrictSelect();
+      el("district").value = hit.district.id;
+
+      const payload = await fetchJson(hit.district.file);
+      state.districtPayload = payload;
+      if (updateUrl) history.replaceState(null, "", `?id=${encodeURIComponent(id)}`);
+      renderDistrict(payload);
+    }
+
+    function renderDistrict(payload) {
+      clearMap();
+      const rows = payload.rows;
+      const summary = payload.summary;
+      el("title").textContent = `${summary.province} · ${summary.city} · ${summary.district}`;
+      el("clinicCount").textContent = summary.count;
+      el("districtCount").textContent = "1";
+      el("distance").textContent = Number(summary.total_distance_km).toFixed(1) + " km";
+      el("note").textContent = "按编号逐站前往；点“高德定位”会打开高德地图。实际驾车/步行以高德实时导航为准。";
+
+      const latlngs = rows.map(p => [p.lat, p.lng]);
+      if (latlngs.length) {
+      L.polyline(latlngs, { color: "#db4c15", weight: 4, opacity: 0.9 }).addTo(state.routeLayer);
+        if (!el("routeToggle").checked && state.map.hasLayer(state.routeLayer)) {
+          state.map.removeLayer(state.routeLayer);
+        }
+        state.bounds = L.latLngBounds(latlngs);
+        state.map.fitBounds(state.bounds, { padding: [26, 26] });
+      }
+      rows.forEach((p, index) => {
+        const cls = index === 0 ? "number-marker start" : index === rows.length - 1 ? "number-marker end" : "number-marker";
         const icon = L.divIcon({
           className: "",
           html: `<div class="${cls}">${p.order}</div>`,
@@ -348,7 +518,7 @@
           iconAnchor: [13, 13],
           popupAnchor: [0, -14]
         });
-        const marker = L.marker([p.lat, p.lng], { icon }).addTo(map);
+        const marker = L.marker([p.lat, p.lng], { icon }).addTo(state.markerLayer);
         marker.bindPopup(`
           <div class="popup-title">${p.order}. ${escapeHtml(p.name)}</div>
           <div class="popup-text">${escapeHtml(p.address || "地址缺失")}</div>
@@ -357,13 +527,15 @@
           <div class="popup-text"><a href="${p.amap_marker_url}" target="_blank" rel="noreferrer">高德定位</a></div>
         `);
         marker.on("click", () => highlight(index));
-        markers.push(marker);
+        state.markers.push(marker);
+      });
+      renderStops(rows);
+      filterStops();
+    }
 
-        const item = document.createElement("article");
-        item.className = "stop";
-        item.dataset.index = String(index);
-        item.dataset.search = `${p.order} ${p.name} ${p.address} ${p.phone} ${p.area}`.toLowerCase();
-        item.innerHTML = `
+    function renderStops(rows) {
+      el("content").innerHTML = rows.map((p, index) => `
+        <article class="stop" data-index="${index}" data-search="${escapeHtml(`${p.order} ${p.name} ${p.address} ${p.phone} ${p.area}`.toLowerCase())}">
           <div><span class="badge">${p.order}</span></div>
           <div>
             <div class="name">${escapeHtml(p.name)}</div>
@@ -374,36 +546,33 @@
               <button type="button" data-focus="${index}">地图定位</button>
             </div>
           </div>
-        `;
-        list.appendChild(item);
+        </article>
+      `).join("");
+      el("content").querySelectorAll("[data-focus]").forEach(button => {
+        button.addEventListener("click", () => highlight(Number(button.dataset.focus)));
       });
-      list.addEventListener("click", event => {
-        const button = event.target.closest("[data-focus]");
-        if (button) highlight(Number(button.dataset.focus));
-      });
-      document.getElementById("fit").addEventListener("click", () => map.fitBounds(bounds, { padding: [26, 26] }));
-      document.getElementById("search").addEventListener("input", event => {
-        const term = event.target.value.trim().toLowerCase();
-        document.querySelectorAll(".stop").forEach(el => {
-          el.classList.toggle("is-hidden", term && !el.dataset.search.includes(term));
-        });
+    }
+
+    function filterStops() {
+      const term = el("search").value.trim().toLowerCase();
+      document.querySelectorAll(".stop").forEach(row => {
+        row.classList.toggle("is-hidden", Boolean(term) && !row.dataset.search.includes(term));
       });
     }
 
     function highlight(index) {
-      const p = clinics[index];
-      map.setView([p.lat, p.lng], Math.max(map.getZoom(), 15), { animate: true });
-      markers[index].openPopup();
-      const row = document.querySelector(`[data-index="${index}"]`);
-      row?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      const p = state.districtPayload.rows[index];
+      state.map.setView([p.lat, p.lng], Math.max(state.map.getZoom(), 15), { animate: true });
+      state.markers[index].openPopup();
+      document.querySelector(`[data-index="${index}"]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
 
     if (localStorage.getItem("vetmap_access") === "ok") {
-      gate.classList.add("hidden");
-      app.classList.remove("hidden");
-      initMap();
+      el("gate").classList.add("hidden");
+      el("app").classList.remove("hidden");
+      boot();
     } else {
-      passInput.focus();
+      el("pass").focus();
     }
   </script>
 </body>

@@ -1,6 +1,6 @@
 {
-  "name": "金华婺城兽医路线",
-  "short_name": "婺城路线",
+  "name": "兽医地图",
+  "short_name": "兽医地图",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f5f7fb",

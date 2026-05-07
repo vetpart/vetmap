@@ -1,3 +1,3 @@
 # vetmap
 
-Static GitHub Pages route map for the Wucheng clinic visit route.
+Static GitHub Pages map with district-level veterinary clinic data.
