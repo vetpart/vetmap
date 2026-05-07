@@ -1,6 +1,6 @@
 {
-  "name": "兽医地图",
-  "short_name": "兽医地图",
+  "name": "VETMAP",
+  "short_name": "VETMAP",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f5f7fb",
