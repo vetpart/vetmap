@@ -46,11 +46,13 @@
       z-index: 700;
       border: 0;
       border-radius: 8px;
-      width: 54px;
-      height: 38px;
+      width: 34px;
+      height: 34px;
       background: #0f3d5e;
       color: #fff;
       font-weight: 800;
+      font-size: 18px;
+      line-height: 1;
       box-shadow: 0 4px 14px rgba(16, 32, 51, .22);
     }
     .sheet {
@@ -81,6 +83,33 @@
       background: #fff;
       font-size: 13px;
       min-width: 0;
+    }
+    .route-tabs {
+      display: flex;
+      gap: 6px;
+      margin-top: 7px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 1px;
+    }
+    .route-tabs::-webkit-scrollbar { display: none; }
+    .route-tab {
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      min-height: 30px;
+      padding: 0 10px;
+      background: #fff;
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .route-tab.is-active {
+      border-color: var(--blue);
+      background: var(--blue);
+      color: #fff;
     }
     .route-toggle {
       display: flex;
@@ -244,14 +273,14 @@
   <main id="app" class="app hidden">
     <div class="map-wrap">
       <div id="map"></div>
-      <button id="fit" class="map-fit" type="button">全图</button>
+      <button id="fit" class="map-fit" type="button" aria-label="全图" title="全图"><span aria-hidden="true">⛶</span></button>
     </div>
     <section class="sheet">
       <header>
         <h1 id="title">VETMAP</h1>
         <div class="summary">
           <div><b id="clinicCount">--</b><span>店面</span></div>
-          <div><b id="districtCount">--</b><span>区县</span></div>
+          <div><b id="districtCount">--</b><span id="districtCountLabel">区县</span></div>
           <div><b id="distance">--</b><span>路线里程</span></div>
           <div><b>GCJ-02</b><span>高德坐标</span></div>
         </div>
@@ -260,6 +289,7 @@
           <select id="city"></select>
           <select id="district"></select>
         </div>
+        <div id="routeTabs" class="route-tabs hidden" aria-label="路线分段"></div>
         <div class="route-toggle">
           <label><input id="routeToggle" type="checkbox" checked /> 显示路径</label>
           <span>关闭后只显示点位</span>
@@ -279,6 +309,8 @@
       selectedCity: null,
       selectedDistrict: null,
       districtPayload: null,
+      selectedRouteId: null,
+      activeRows: [],
       map: null,
       markerLayer: null,
       routeLayer: null,
@@ -420,7 +452,7 @@
       });
       el("routeToggle").addEventListener("change", () => {
         const show = el("routeToggle").checked;
-        if (show) {
+        if (show && state.selectedRouteId !== "all") {
           state.routeLayer.addTo(state.map);
         } else {
           state.map.removeLayer(state.routeLayer);
@@ -441,6 +473,8 @@
       state.selectedCity = null;
       state.selectedDistrict = null;
       state.districtPayload = null;
+      state.selectedRouteId = null;
+      state.activeRows = [];
       clearMap();
       el("province").value = "";
       fillCitySelect();
@@ -450,8 +484,11 @@
       el("title").textContent = "VETMAP";
       el("clinicCount").textContent = "--";
       el("districtCount").textContent = "--";
+      el("districtCountLabel").textContent = "区县";
       el("distance").textContent = "--";
       el("note").textContent = "";
+      el("routeTabs").classList.add("hidden");
+      el("routeTabs").innerHTML = "";
       el("content").innerHTML = "";
       state.map.setView([32.5, 113.5], 4);
       history.replaceState(null, "", location.pathname);
@@ -459,14 +496,19 @@
 
     function renderDirectory() {
       state.districtPayload = null;
+      state.selectedRouteId = null;
+      state.activeRows = [];
       clearMap();
       const province = state.selectedProvince;
       const city = state.selectedCity;
       el("title").textContent = city ? `${province.name} · ${city.name}` : province ? province.name : "VETMAP";
       el("clinicCount").textContent = city?.count ?? province?.count ?? state.catalog.counts.clinics;
       el("districtCount").textContent = city?.district_count ?? province?.district_count ?? state.catalog.counts.districts;
+      el("districtCountLabel").textContent = "区县";
       el("distance").textContent = "--";
       el("note").textContent = "选择省、市、区县后，只加载该区县数据；每个区县都有独立分享地址。";
+      el("routeTabs").classList.add("hidden");
+      el("routeTabs").innerHTML = "";
 
       const districts = city ? city.districts : province ? province.cities.flatMap(c => c.districts.map(d => ({ ...d, city_name: c.name }))) : state.catalog.provinces.flatMap(p => p.cities.flatMap(c => c.districts.map(d => ({ ...d, province_name: p.name, city_name: c.name }))));
       el("content").innerHTML = `
@@ -504,62 +546,141 @@
       const payload = await fetchJson(hit.district.file);
       state.districtPayload = payload;
       if (updateUrl) history.replaceState(null, "", `?id=${encodeURIComponent(id)}`);
-      renderDistrict(payload);
+      renderDistrict(payload, updateUrl ? null : new URLSearchParams(location.search).get("r"), updateUrl);
     }
 
-    function renderDistrict(payload) {
-      clearMap();
-      if (el("routeToggle").checked && !state.map.hasLayer(state.routeLayer)) {
-        state.routeLayer.addTo(state.map);
+    function routesForPayload(payload) {
+      if (Array.isArray(payload.routes) && payload.routes.length) return payload.routes;
+      return [{
+        id: "r1",
+        name: "第1段",
+        count: payload.rows.length,
+        total_distance_km: payload.summary.total_distance_km,
+        rows: payload.rows,
+      }];
+    }
+
+    function routeIdFromParam(routes, routeParam) {
+      if (routeParam === "all" && routes.length > 1) return "all";
+      if (routeParam) {
+        const normalized = routeParam.startsWith("r") ? routeParam : `r${routeParam}`;
+        if (routes.some(route => route.id === normalized)) return normalized;
       }
-      const rows = payload.rows;
+      return routes[0]?.id ?? null;
+    }
+
+    function updateDistrictUrl(routeId) {
+      if (!state.selectedDistrict) return;
+      const params = new URLSearchParams();
+      params.set("id", state.selectedDistrict.id);
+      if (routeId === "all") {
+        params.set("r", "all");
+      } else if (routeId && routeId !== "r1") {
+        params.set("r", routeId.replace(/^r/, ""));
+      }
+      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
+    }
+
+    function renderRouteTabs(routes) {
+      const tabs = el("routeTabs");
+      if (routes.length <= 1) {
+        tabs.classList.add("hidden");
+        tabs.innerHTML = "";
+        return;
+      }
+      tabs.classList.remove("hidden");
+      tabs.innerHTML = routes.map(route => `
+        <button class="route-tab ${state.selectedRouteId === route.id ? "is-active" : ""}" type="button" data-route-id="${route.id}">
+          ${escapeHtml(route.name)} ${route.count}家
+        </button>
+      `).join("") + `
+        <button class="route-tab ${state.selectedRouteId === "all" ? "is-active" : ""}" type="button" data-route-id="all">
+          全部 ${state.districtPayload.summary.count}家
+        </button>
+      `;
+      tabs.querySelectorAll("[data-route-id]").forEach(button => {
+        button.addEventListener("click", () => selectRoute(button.dataset.routeId));
+      });
+    }
+
+    function renderDistrict(payload, routeParam = null, updateUrl = false) {
       const summary = payload.summary;
+      const routes = routesForPayload(payload);
       el("title").textContent = `${summary.province} · ${summary.city} · ${summary.district}`;
       el("clinicCount").textContent = summary.count;
-      el("districtCount").textContent = "1";
-      el("distance").textContent = Number(summary.total_distance_km).toFixed(1) + " km";
-      el("note").textContent = "按编号逐站前往；点“高德定位”会打开高德地图。实际驾车/步行以高德实时导航为准。";
+      el("districtCount").textContent = routes.length;
+      el("districtCountLabel").textContent = "路线";
+      const routeId = routeIdFromParam(routes, routeParam);
+      selectRoute(routeId, updateUrl);
+    }
+
+    function selectRoute(routeId, updateUrl = true) {
+      state.selectedRouteId = routeId;
+      renderRouteTabs(routesForPayload(state.districtPayload));
+      if (updateUrl) updateDistrictUrl(routeId);
+      renderRouteView();
+    }
+
+    function renderRouteView() {
+      clearMap();
+      const payload = state.districtPayload;
+      const routes = routesForPayload(payload);
+      const selectedRoute = routes.find(route => route.id === state.selectedRouteId);
+      const showAll = state.selectedRouteId === "all";
+      const rows = showAll ? payload.rows : (selectedRoute?.rows ?? []);
+      state.activeRows = rows;
+
+      if (showAll) {
+        el("distance").textContent = "--";
+        el("note").textContent = "全部点位模式只显示点位，不绘制跨区域路线；选择某一段后按编号逐站前往。";
+      } else {
+        el("distance").textContent = Number(selectedRoute?.total_distance_km ?? 0).toFixed(1) + " km";
+        el("note").textContent = "按当前分段编号逐站前往；点“高德定位”会打开高德地图。实际驾车/步行以高德实时导航为准。";
+      }
 
       const latlngs = rows.map(p => [p.lat, p.lng]);
       if (latlngs.length) {
-      L.polyline(latlngs, { color: "#db4c15", weight: 4, opacity: 0.9 }).addTo(state.routeLayer);
-        if (!el("routeToggle").checked && state.map.hasLayer(state.routeLayer)) {
-          state.map.removeLayer(state.routeLayer);
+        if (!showAll) {
+          L.polyline(latlngs, { color: "#db4c15", weight: 4, opacity: 0.9 }).addTo(state.routeLayer);
+          if (el("routeToggle").checked && !state.map.hasLayer(state.routeLayer)) {
+            state.routeLayer.addTo(state.map);
+          }
         }
         state.bounds = L.latLngBounds(latlngs);
         state.map.fitBounds(state.bounds, { padding: [26, 26] });
       }
       rows.forEach((p, index) => {
-        const cls = index === 0 ? "number-marker start" : index === rows.length - 1 ? "number-marker end" : "number-marker";
+        const displayOrder = showAll ? (p.global_order ?? p.order) : p.order;
+        const cls = showAll ? "number-marker" : index === 0 ? "number-marker start" : index === rows.length - 1 ? "number-marker end" : "number-marker";
         const icon = L.divIcon({
           className: "",
-          html: `<div class="${cls}">${p.order}</div>`,
+          html: `<div class="${cls}">${displayOrder}</div>`,
           iconSize: [27, 27],
           iconAnchor: [13, 13],
           popupAnchor: [0, -14]
         });
         const marker = L.marker([p.lat, p.lng], { icon }).addTo(state.markerLayer);
         marker.bindPopup(`
-          <div class="popup-title">${p.order}. ${escapeHtml(p.name)}</div>
+          <div class="popup-title">${displayOrder}. ${escapeHtml(p.name)}</div>
           <div class="popup-text">${escapeHtml(p.address || "地址缺失")}</div>
           <div class="popup-text">电话：${escapeHtml(p.phone || "未提供")}</div>
-          <div class="popup-text">累计：${Number(p.cumulative_distance_km).toFixed(2)} km</div>
+          <div class="popup-text">${showAll ? escapeHtml(p.route_name || "") + " · " : ""}累计：${Number(p.cumulative_distance_km).toFixed(2)} km</div>
           <div class="popup-text"><a href="${p.amap_marker_url}" target="_blank" rel="noreferrer">高德定位</a></div>
         `);
         marker.on("click", () => highlight(index));
         state.markers.push(marker);
       });
-      renderStops(rows);
+      renderStops(rows, showAll);
     }
 
-    function renderStops(rows) {
+    function renderStops(rows, showAll = false) {
       el("content").innerHTML = rows.map((p, index) => `
         <article class="stop" data-index="${index}" data-search="${escapeHtml(`${p.order} ${p.name} ${p.address} ${p.phone} ${p.area}`.toLowerCase())}">
-          <div><span class="badge">${p.order}</span></div>
+          <div><span class="badge">${showAll ? (p.global_order ?? p.order) : p.order}</span></div>
           <div>
             <div class="name">${escapeHtml(p.name)}</div>
             <div class="addr">${escapeHtml(p.address || "地址缺失")}</div>
-            <div class="meta">上一站 ${Number(p.prev_distance_km).toFixed(2)} km · 累计 ${Number(p.cumulative_distance_km).toFixed(2)} km · 电话：${escapeHtml(p.phone || "未提供")}</div>
+            <div class="meta">${showAll ? `${escapeHtml(p.route_name || "")} · ` : ""}上一站 ${Number(p.prev_distance_km).toFixed(2)} km · 累计 ${Number(p.cumulative_distance_km).toFixed(2)} km · 电话：${escapeHtml(p.phone || "未提供")}</div>
             <div class="actions">
               <a class="primary" href="${p.amap_marker_url}" target="_blank" rel="noreferrer">高德定位</a>
               <button type="button" data-focus="${index}">地图定位</button>
@@ -573,7 +694,7 @@
     }
 
     function highlight(index) {
-      const p = state.districtPayload.rows[index];
+      const p = state.activeRows[index];
       state.map.setView([p.lat, p.lng], Math.max(state.map.getZoom(), 15), { animate: true });
       state.markers[index].openPopup();
       document.querySelector(`[data-index="${index}"]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
