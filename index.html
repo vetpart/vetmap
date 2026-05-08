@@ -136,6 +136,30 @@
       height: 16px;
       accent-color: var(--blue);
     }
+    .start-control {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 7px;
+      padding: 7px 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8fafc;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .start-control span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .start-control button {
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 6px 8px;
+      color: var(--text);
+      font-size: 12px;
+    }
     .note { margin-top: 6px; color: var(--muted); font-size: 11px; line-height: 1.3; }
     .content { min-height: 0; overflow: auto; padding: 4px 10px calc(18px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling: touch; }
     .directory-title { padding: 8px 4px; color: var(--muted); font-size: 13px; }
@@ -178,10 +202,10 @@
     .stop:last-child .badge { background: var(--red); }
     .name { margin-top: 0; font-weight: 800; font-size: 14px; line-height: 1.3; }
     .addr, .meta { margin-top: 3px; color: var(--muted); font-size: 12px; line-height: 1.35; }
-    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 6px; }
+    .actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin-top: 5px; }
     .actions a, .actions button {
       display: flex;
-      min-height: 34px;
+      min-height: 30px;
       align-items: center;
       justify-content: center;
       border-radius: 8px;
@@ -189,7 +213,7 @@
       background: #fff;
       color: var(--blue);
       font-weight: 800;
-      font-size: 12px;
+      font-size: 11px;
     }
     .actions a.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
     .number-marker {
@@ -294,6 +318,7 @@
           <label><input id="routeToggle" type="checkbox" checked /> 显示路径</label>
           <span>关闭后只显示点位</span>
         </div>
+        <div id="startControl" class="start-control hidden"></div>
         <div id="note" class="note">选择省、市、区县后，只加载该区县数据；每个区县都有独立分享地址。</div>
       </header>
       <div id="content" class="content"></div>
@@ -301,6 +326,7 @@
   </main>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="route-tools.js"></script>
   <script>
     const password = String.fromCharCode(118,101,116,50,48,50,54);
     const state = {
@@ -316,6 +342,7 @@
       routeLayer: null,
       bounds: null,
       markers: [],
+      customStart: null,
     };
     window.vetmapState = state;
 
@@ -452,7 +479,7 @@
       });
       el("routeToggle").addEventListener("change", () => {
         const show = el("routeToggle").checked;
-        if (show && state.selectedRouteId !== "all") {
+        if (show && state.routeLayer.getLayers().length) {
           state.routeLayer.addTo(state.map);
         } else {
           state.map.removeLayer(state.routeLayer);
@@ -475,6 +502,7 @@
       state.districtPayload = null;
       state.selectedRouteId = null;
       state.activeRows = [];
+      state.customStart = null;
       clearMap();
       el("province").value = "";
       fillCitySelect();
@@ -489,6 +517,8 @@
       el("note").textContent = "";
       el("routeTabs").classList.add("hidden");
       el("routeTabs").innerHTML = "";
+      el("startControl").classList.add("hidden");
+      el("startControl").innerHTML = "";
       el("content").innerHTML = "";
       state.map.setView([32.5, 113.5], 4);
       history.replaceState(null, "", location.pathname);
@@ -498,6 +528,7 @@
       state.districtPayload = null;
       state.selectedRouteId = null;
       state.activeRows = [];
+      state.customStart = null;
       clearMap();
       const province = state.selectedProvince;
       const city = state.selectedCity;
@@ -509,6 +540,8 @@
       el("note").textContent = "选择省、市、区县后，只加载该区县数据；每个区县都有独立分享地址。";
       el("routeTabs").classList.add("hidden");
       el("routeTabs").innerHTML = "";
+      el("startControl").classList.add("hidden");
+      el("startControl").innerHTML = "";
 
       const districts = city ? city.districts : province ? province.cities.flatMap(c => c.districts.map(d => ({ ...d, city_name: c.name }))) : state.catalog.provinces.flatMap(p => p.cities.flatMap(c => c.districts.map(d => ({ ...d, province_name: p.name, city_name: c.name }))));
       el("content").innerHTML = `
@@ -545,6 +578,7 @@
 
       const payload = await fetchJson(hit.district.file);
       state.districtPayload = payload;
+      state.customStart = null;
       if (updateUrl) history.replaceState(null, "", `?id=${encodeURIComponent(id)}`);
       renderDistrict(payload, updateUrl ? null : new URLSearchParams(location.search).get("r"), updateUrl);
     }
@@ -615,10 +649,40 @@
     }
 
     function selectRoute(routeId, updateUrl = true) {
+      if (state.selectedRouteId !== routeId) state.customStart = null;
       state.selectedRouteId = routeId;
       renderRouteTabs(routesForPayload(state.districtPayload));
       if (updateUrl) updateDistrictUrl(routeId);
       renderRouteView();
+    }
+
+    function setRouteStart(amapId) {
+      if (!state.districtPayload || !state.selectedRouteId) return;
+      state.customStart = { routeId: state.selectedRouteId, amapId };
+      renderRouteView();
+      const index = state.activeRows.findIndex(row => row.amap_id === amapId);
+      if (index >= 0) highlight(index);
+    }
+
+    function clearRouteStart() {
+      state.customStart = null;
+      renderRouteView();
+    }
+
+    function renderStartControl(activeCustom, rows) {
+      const control = el("startControl");
+      if (!activeCustom) {
+        control.classList.add("hidden");
+        control.innerHTML = "";
+        return;
+      }
+      const start = rows[0];
+      control.classList.remove("hidden");
+      control.innerHTML = `
+        <span>起点：${escapeHtml(start?.name || "")}</span>
+        <button type="button" data-clear-start>恢复原路线</button>
+      `;
+      control.querySelector("[data-clear-start]")?.addEventListener("click", clearRouteStart);
     }
 
     function renderRouteView() {
@@ -627,12 +691,29 @@
       const routes = routesForPayload(payload);
       const selectedRoute = routes.find(route => route.id === state.selectedRouteId);
       const showAll = state.selectedRouteId === "all";
-      const rows = showAll ? payload.rows : (selectedRoute?.rows ?? []);
+      let rows = showAll ? payload.rows : (selectedRoute?.rows ?? []);
+      const activeCustom = Boolean(
+        state.customStart &&
+        state.customStart.routeId === state.selectedRouteId &&
+        rows.some(row => row.amap_id === state.customStart.amapId)
+      );
+      if (activeCustom) {
+        rows = window.VetRouteTools.reorderRowsFromStart(rows, state.customStart.amapId, {
+          routeId: showAll ? "custom-all" : selectedRoute?.id,
+          routeName: showAll ? "自定全区县路线" : selectedRoute?.name,
+        });
+      }
       state.activeRows = rows;
+      renderStartControl(activeCustom, rows);
 
-      if (showAll) {
+      if (showAll && !activeCustom) {
         el("distance").textContent = "--";
         el("note").textContent = "全部点位模式只显示点位，不绘制跨区域路线；选择某一段后按编号逐站前往。";
+      } else if (activeCustom) {
+        el("distance").textContent = window.VetRouteTools.totalDistanceKm(rows).toFixed(1) + " km";
+        el("note").textContent = showAll
+          ? "已按所选起点重排当前区县；这是浏览器内临时路线，刷新后恢复原路线。"
+          : "已按所选起点重排当前分段；这是浏览器内临时路线，刷新后恢复原路线。";
       } else {
         el("distance").textContent = Number(selectedRoute?.total_distance_km ?? 0).toFixed(1) + " km";
         el("note").textContent = "按当前分段编号逐站前往；点“高德定位”会打开高德地图。实际驾车/步行以高德实时导航为准。";
@@ -640,7 +721,7 @@
 
       const latlngs = rows.map(p => [p.lat, p.lng]);
       if (latlngs.length) {
-        if (!showAll) {
+        if (!showAll || activeCustom) {
           L.polyline(latlngs, { color: "#db4c15", weight: 4, opacity: 0.9 }).addTo(state.routeLayer);
           if (el("routeToggle").checked && !state.map.hasLayer(state.routeLayer)) {
             state.routeLayer.addTo(state.map);
@@ -650,8 +731,8 @@
         state.map.fitBounds(state.bounds, { padding: [26, 26] });
       }
       rows.forEach((p, index) => {
-        const displayOrder = showAll ? (p.global_order ?? p.order) : p.order;
-        const cls = showAll ? "number-marker" : index === 0 ? "number-marker start" : index === rows.length - 1 ? "number-marker end" : "number-marker";
+        const displayOrder = showAll && !activeCustom ? (p.global_order ?? p.order) : p.order;
+        const cls = showAll && !activeCustom ? "number-marker" : index === 0 ? "number-marker start" : index === rows.length - 1 ? "number-marker end" : "number-marker";
         const icon = L.divIcon({
           className: "",
           html: `<div class="${cls}">${displayOrder}</div>`,
@@ -664,32 +745,40 @@
           <div class="popup-title">${displayOrder}. ${escapeHtml(p.name)}</div>
           <div class="popup-text">${escapeHtml(p.address || "地址缺失")}</div>
           <div class="popup-text">电话：${escapeHtml(p.phone || "未提供")}</div>
-          <div class="popup-text">${showAll ? escapeHtml(p.route_name || "") + " · " : ""}累计：${Number(p.cumulative_distance_km).toFixed(2)} km</div>
+          <div class="popup-text">${showAll && !activeCustom ? escapeHtml(p.route_name || "") + " · " : ""}累计：${Number(p.cumulative_distance_km).toFixed(2)} km</div>
           <div class="popup-text"><a href="${p.amap_marker_url}" target="_blank" rel="noreferrer">高德定位</a></div>
+          <div class="popup-text"><button type="button" data-start="${escapeHtml(p.amap_id)}">设为起点</button></div>
         `);
         marker.on("click", () => highlight(index));
+        marker.on("popupopen", event => {
+          event.popup.getElement()?.querySelector("[data-start]")?.addEventListener("click", () => setRouteStart(p.amap_id));
+        });
         state.markers.push(marker);
       });
-      renderStops(rows, showAll);
+      renderStops(rows, showAll, activeCustom);
     }
 
-    function renderStops(rows, showAll = false) {
+    function renderStops(rows, showAll = false, activeCustom = false) {
       el("content").innerHTML = rows.map((p, index) => `
         <article class="stop" data-index="${index}" data-search="${escapeHtml(`${p.order} ${p.name} ${p.address} ${p.phone} ${p.area}`.toLowerCase())}">
-          <div><span class="badge">${showAll ? (p.global_order ?? p.order) : p.order}</span></div>
+          <div><span class="badge">${showAll && !activeCustom ? (p.global_order ?? p.order) : p.order}</span></div>
           <div>
             <div class="name">${escapeHtml(p.name)}</div>
             <div class="addr">${escapeHtml(p.address || "地址缺失")}</div>
-            <div class="meta">${showAll ? `${escapeHtml(p.route_name || "")} · ` : ""}上一站 ${Number(p.prev_distance_km).toFixed(2)} km · 累计 ${Number(p.cumulative_distance_km).toFixed(2)} km · 电话：${escapeHtml(p.phone || "未提供")}</div>
+            <div class="meta">${showAll && !activeCustom ? `${escapeHtml(p.route_name || "")} · ` : ""}上一站 ${Number(p.prev_distance_km).toFixed(2)} km · 累计 ${Number(p.cumulative_distance_km).toFixed(2)} km · 电话：${escapeHtml(p.phone || "未提供")}</div>
             <div class="actions">
               <a class="primary" href="${p.amap_marker_url}" target="_blank" rel="noreferrer">高德定位</a>
               <button type="button" data-focus="${index}">地图定位</button>
+              <button type="button" data-start="${escapeHtml(p.amap_id)}">设为起点</button>
             </div>
           </div>
         </article>
       `).join("");
       el("content").querySelectorAll("[data-focus]").forEach(button => {
         button.addEventListener("click", () => highlight(Number(button.dataset.focus)));
+      });
+      el("content").querySelectorAll("[data-start]").forEach(button => {
+        button.addEventListener("click", () => setRouteStart(button.dataset.start));
       });
     }
 
